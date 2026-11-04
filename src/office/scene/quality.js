@@ -29,7 +29,7 @@ export const phoneLike = () => (phone ??= matchMedia('(pointer: coarse)').matche
 function autoStart() {
   if (SOFTWARE_GL) return 'low';
   let saved = null; try { saved = JSON.parse(store.get(AUTO_KEY) || 'null'); } catch { /* old value */ }
-  const base = phoneLike() ? 'low' : small.matches || matchMedia('(pointer: coarse)').matches ? 'medium' : 'high';
+  const base = phoneLike() ? 'low' : 'medium';
   if (!saved || !LEVELS.includes(saved.level)) return base;
   if (Date.now() - (saved.at || 0) > RETRY_MS) return LEVELS[Math.min(LEVELS.indexOf(saved.level) + 1, LEVELS.indexOf(base))];
   return saved.level;

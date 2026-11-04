@@ -10,6 +10,7 @@ export default {
   cacheWarm: '☕ warm {n} min',
   cacheCold: '☕ cold',
   title: 'Claude sessions',
+  feed: 'Activity',
   all: 'All',
   search: 'Find a session, project, branch…  (/)',
   none: 'No session matches “{q}”.',

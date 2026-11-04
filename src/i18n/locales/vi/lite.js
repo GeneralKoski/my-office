@@ -10,6 +10,7 @@ export default {
   cacheWarm: '☕ còn ấm {n} phút',
   cacheCold: '☕ đã nguội',
   title: 'Phiên Claude',
+  feed: 'Hoạt động',
   all: 'Tất cả',
   search: 'Tìm phiên, dự án, nhánh…  (phím /)',
   none: 'Không phiên nào khớp “{q}”.',

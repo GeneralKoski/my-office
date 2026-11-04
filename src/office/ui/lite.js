@@ -96,15 +96,24 @@ function build() {
   const search = el('input', 'v2-search'); search.type = 'search'; search.id = 'lite-q'; search.placeholder = tr('lite.search'); search.setAttribute('aria-label', tr('lite.search')); search.autocomplete = 'off';
   search.addEventListener('input', () => { query = search.value.trim(); renderLite(); });
   search.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { search.value = ''; query = ''; renderLite(); search.blur(); } });
-  const bar = el('div', 'v2-bar'); bar.append(tabs, search);
+  const feedBtn = el('button', 'v2-feed', tr('lite.feed')); feedBtn.type = 'button';
+  feedBtn.setAttribute('aria-pressed', String(feedOn()));
+  feedBtn.addEventListener('click', () => { const on = !feedOn(); setFeed(on); feedBtn.setAttribute('aria-pressed', String(on)); });
+  const tools = el('div', 'v2-tools'); tools.append(search, feedBtn);
+  const bar = el('div', 'v2-bar'); bar.append(tabs, tools);
   head.append(title, bar);
   permHost = el('div', 'v2-perms'); listEl = el('div', 'v2-list'); emptyEl = el('p', 'v2-empty'); emptyEl.hidden = true;
   box.replaceChildren(head, permHost, listEl, emptyEl);
 }
+const feedOn = () => { try { return localStorage.getItem('office-lite-feed') === 'on'; } catch { return false; } };
+function setFeed(on) {
+  document.body.classList.toggle('lite-feed', on);
+  try { localStorage.setItem('office-lite-feed', on ? 'on' : 'off'); } catch { /* storage blocked */ }
+}
 export function setLite(on) {
   // opened in 2D: the 3D world is built now, a few seconds (the toast gets a frame to show first)
   if (!on && !state.world) { toast(tr('lite.building')); setTimeout(() => { needWorld(); setLite(false); }, 50); return; }
-  lite = on; document.body.classList.toggle('is-lite', on); $('lite').hidden = !on; $('btn-lite').setAttribute('aria-pressed', String(on));
+  lite = on; document.body.classList.toggle('is-lite', on); if (on) document.body.classList.toggle('lite-feed', feedOn()); $('lite').hidden = !on; $('btn-lite').setAttribute('aria-pressed', String(on));
   for (const b of document.querySelectorAll('[data-view]')) b.setAttribute('aria-pressed', String((b.dataset.view === '2d') === on));
   try { localStorage.setItem('office-lite', on ? 'on' : 'off'); } catch { /* storage blocked */ }
   // the approvals: at the top of the list in 2D, over the office in 3D
@@ -137,11 +146,12 @@ export function renderLite() {
 
 /** Whether the page opens in the 2D list (kept per browser, or ?view=2d): main.js then leaves the 3D world for later. */
 export function listAtStart() {
-  let on = false; try { on = localStorage.getItem('office-lite') === 'on'; } catch { /* storage blocked */ }
-  return on || new URLSearchParams(location.search).get('view') === '2d';
+  let saved = null; try { saved = localStorage.getItem('office-lite'); } catch { /* storage blocked */ }
+  const view = new URLSearchParams(location.search).get('view');
+  return view === '2d' || (view !== '3d' && saved !== 'off');
 }
 export function setup() {
-  lite = listAtStart();
+  lite = listAtStart(); if (lite) document.body.classList.toggle('lite-feed', feedOn());
   $('btn-lite').addEventListener('click', () => setLite(!lite));
   for (const b of document.querySelectorAll('[data-view]')) b.addEventListener('click', () => setLite(b.dataset.view === '2d'));
   // "/" finds a session in 2D (not while typing somewhere)
