@@ -1,6 +1,6 @@
 /* The 2D view (ui/lite.js): the sessions as rows, no 3D. Quiet on purpose: one colour for state (the dot), the rest
    in greys; numbers in the mono face so the columns line up. */
-.is-lite #stage, .is-lite .toolbar, .is-lite #btn-full, .is-lite .chips { display: none !important; }   /* (3D | 2D in the top bar turns it back) */
+.is-lite #stage { display: none !important; }
 /* the sessions are the page: the left list would say it twice (a phone keeps its own tabs: ui/phone.js) */
 :root:not(.is-phone) .is-lite #app { grid-template-columns: minmax(0, 1fr) 350px; grid-template-areas: "top top" "stage right"; }
 :root:not(.is-phone) .is-lite .side-left { display: none; }
@@ -8,7 +8,7 @@
 :root:not(.is-phone) .is-lite #app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "stage"; }
 :root:not(.is-phone) .is-lite .side-right { display: none; }
 /* nothing in the top bar that only means something in 3D, or that is only for show */
-.is-lite #btn-night, .is-lite #btn-replay, .is-lite #btn-chat, .is-lite #clock, .is-lite #btn-mac { display: none; }
+.is-lite #btn-chat, .is-lite #clock, .is-lite #btn-mac { display: none; }
 /* the settings' 3D-only tabs */
 .is-lite [data-st-tab="office"], .is-lite [data-st-tab="people"] { display: none; }
 /* the plan: just "5 h x% · Week y%", not clickable */

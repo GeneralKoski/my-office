@@ -1,9 +1,5 @@
 export default {
   status: { work: 'đang làm', wait: 'chờ duyệt', rest: 'đang nghỉ' },
-  station: {
-    dining: 'phòng ăn', board: 'bảng trắng', library: 'thư viện', desk: 'bàn làm việc', server: 'phòng máy', globe: 'cửa sổ',
-    coffee: 'góc cà phê', meeting: 'phòng họp', director: 'phòng giám đốc', wc: 'nhà vệ sinh', tests: 'bảng đèn test', post: 'hộp thư',
-  },
   verb: {
     prompt: 'nhận việc: “{label}”',
     read: 'đọc {label}',
@@ -42,19 +38,5 @@ export default {
     testok: 'test qua hết ✅ ({label})',
     testfail: 'test lỗi ❌ ({label})',
     use: 'dùng {label}',
-  },
-  bubble: {
-    wait: 'Chờ duyệt: {label}',
-    ask: 'Có câu hỏi cho bạn',
-    fail: 'Lỗi: {label}',
-    stop: 'Xong việc',
-    interrupt: 'Đã dừng theo lệnh bạn',
-    idle: 'Chờ bạn nhắn',
-    compact: 'Nén lịch sử',
-    agent: 'Giao việc cho {label}',
-    deploy: 'Deploy {label}',
-    plan: 'Cập nhật việc cần làm',
-    testok: ['Xanh hết! ✅', 'Test qua rồi 🎉', 'Không lỗi nào, ngon!'],
-    testfail: ['Đỏ rồi, xem lại chút…', 'Hỏng một test, sửa tiếp', 'Ơ, sao lại đỏ 🤔'],
   },
 };

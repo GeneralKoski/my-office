@@ -1,6 +1,6 @@
 // "Your turn": sessions that finished or wait for you.
 import { state } from '../core/state.js';
-import { replay, short } from '../core/env.js';
+import { short } from '../core/env.js';
 import { dn, sessions } from '../core/sessions.js';
 import { queueUi, renderHud, toast } from '../ui/activity.js';
 import { openSession } from '../ui/session-drawer.js';
@@ -11,7 +11,6 @@ import { t as tr } from '../../i18n/index.js';
 /* ---------- "your turn": a session finished while you were away, or waits for you ---------- */
 export const unseenDone = new Set();
 export function onTurnDone(s) {
-  if (replay.on) return;
   sfx.play('turn');
   const away = !(document.visibilityState === 'visible' && document.hasFocus());
   if (!away || state.selectedId === s.id) return;

@@ -1,34 +1,7 @@
 export default {
   language: 'Ngôn ngữ',
   switchingLang: 'Đang đổi ngôn ngữ…',
-  toPro: 'Đang dựng văn phòng chuyên nghiệp…',
-  toHq: 'Đang dựng văn phòng tập đoàn…',
-  toCozy: 'Đang về văn phòng ấm cúng…',
-  seasonOn: 'Bật trang trí theo mùa…',
-  graphics: 'Đồ hoạ',
-  q: { auto: 'Tự động', low: 'Thấp', medium: 'Vừa', high: 'Cao' },
-  qNow: 'Đang dùng: {level}. Hạ xuống nếu văn phòng giật hoặc quạt máy kêu to.',
-  qDropped: 'Máy đang chậm nên đồ hoạ được hạ xuống {level}. Đổi trong Cài đặt → Đồ hoạ.',
-  seasonOff: 'Tắt trang trí theo mùa…',
   tabs: { office: 'Văn phòng', people: 'Nhân vật', display: 'Hiển thị', more: 'Khác' },
-  layouts: {
-    cozy: { name: 'Ấm cúng', sub: 'Một phòng mở · 9 bàn' },
-    pro: { name: 'Chuyên nghiệp', sub: 'Cả tầng công ty · 12 bàn' },
-    hq: { name: 'Tập đoàn', sub: 'Bốn phòng ban · 44 bàn' },
-  },
-  layoutNote: 'Đổi kiểu văn phòng sẽ dựng lại văn phòng: trang tải lại và các phiên quay về ngay.',
-  times: {
-    auto: { name: 'Tự động', sub: 'Theo giờ thật' },
-    day: { name: 'Ngày', sub: 'Luôn ban ngày' },
-    night: { name: 'Đêm', sub: 'Đèn phòng, phố lên đèn' },
-  },
-  looks: {
-    toy: { sub: 'Tròn trịa, bóng bẩy như mô hình đồ chơi' },
-    pixar: { sub: 'Mắt to, tóc nhiều lớp như phim hoạt hình' },
-  },
-  lookNote: 'Mọi người trong văn phòng đổi cùng lúc, cả bạn khi Hoá thân.',
-  qSub: { auto: 'Tự hạ khi giật', low: 'Nhẹ, đỡ tốn pin', medium: 'Cân bằng', high: 'Sắc nét, bóng mềm' },
-  weatherOff: 'Tắt',
   phoneNote: 'Duyệt và theo dõi từ điện thoại',
   bellNote: 'Báo trên máy khi Claude cần bạn',
   notify: 'Điện thoại và thông báo',
@@ -58,12 +31,5 @@ export default {
     after: 'Chặn sau', tries: '{n} lần lỗi',
     costAfter: 'Tiêu tiền mà chưa sửa file nào trong', mins: '{n} phút',
     install: 'Chạy lại `node bin/cli.mjs install` một lần để Claude Code hỏi văn phòng trước mỗi bước.',
-  },
-  // the farewell for a project quiet for a long while (people/farewell.js, server/tenure.mjs)
-  farewell: {
-    title: 'Tiệc chia tay',
-    on: 'Chia tay dự án lâu không làm',
-    note: 'Dự án từng làm thật (ít nhất hai ngày) mà lâu không mở phiên nào thì người của dự án lên công ty lần cuối: dọn bàn vào thùng, cả nhà ký thiệp, ăn bánh, chụp ảnh, trả thẻ cho chị nhân sự. Chỉ là cảnh trong văn phòng: không đụng gì tới dự án. Mở lại dự án là người đó "quay về công ty cũ".',
-    after: 'Sau khi không làm', days: '{n} ngày',
   },
 };

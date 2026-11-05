@@ -1,6 +1,6 @@
 // The Mac drawer: memory, CPU, dev servers, plan limits, cleanup.
 import { state } from '../core/state.js';
-import { $, GB, el, fmtAgo, fmtBytes, hhmm, pad2, replay, small } from '../core/env.js';
+import { $, GB, el, fmtAgo, fmtBytes, hhmm, pad2, small } from '../core/env.js';
 import { queueUi, toast } from './activity.js';
 import { closeSession, drM } from './session-drawer.js';
 import { chatMoved } from './group-chat.js';
@@ -228,13 +228,13 @@ function autoRow() {
 }
 // the server moved the conversations open on an account that ran out
 export function acctMoved(d) {
-  if (replay.on || !d.names?.length) return;
+  if (!d.names?.length) return;
   toast(tr('mac.plan.moved', { from: d.from, to: d.to, n: d.names.length, names: d.names.join(', ') }), 10000);
   chatMoved(d.names, d.to);
 }
 // the server moved new sessions to another account (one ran out, or came back)
 export function acctSwitched(d) {
-  if (d.why !== 'auto' || !d.from || replay.on) return;
+  if (d.why !== 'auto' || !d.from) return;
   toast(d.until > Date.now() ? tr('mac.plan.switched', { from: d.from, to: d.to, when: resetText(d.until) }) : tr('mac.plan.switchedBack', { to: d.to }), 9000);
 }
 /* ---------- adding a Claude account (on this computer only) ----------
@@ -382,7 +382,7 @@ export function renderLimits() {
     const key = `${w.key}:${w.resetsAt}:${w.pct >= 95 ? 95 : 80}`;
     if (limitWarned.has(key)) continue;
     limitWarned.add(key);
-    if (!replay.on) toast(tr('mac.plan.warn', { pct: Math.round(w.pct), label: w.label, reset: w.resetsAt ? tr('mac.plan.warnReset', { when: resetText(w.resetsAt) }) : '' }), 6000);
+    toast(tr('mac.plan.warn', { pct: Math.round(w.pct), label: w.label, reset: w.resetsAt ? tr('mac.plan.warnReset', { when: resetText(w.resetsAt) }) : '' }), 6000);
   }
 }
 function renderMacButton() {

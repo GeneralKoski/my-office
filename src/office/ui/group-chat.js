@@ -9,7 +9,7 @@
 // sticker (index), photo (data URL), react (emojis others may add), reacts (how many), answer ([{ key, chance }]: lines
 // under chat.reply that someone answers with), pin, key (two pages telling the same moment make one message).
 import { state } from '../core/state.js';
-import { STATIC, officeNow, replay } from '../core/env.js';
+import { STATIC, officeNow } from '../core/env.js';
 import { colorOf, dn, sessions } from '../core/sessions.js';
 import { sfx } from '../audio/sfx.js';
 import { DEMO } from '../demo/demo.js';
@@ -80,15 +80,15 @@ export function setOpen(on) { chat.open = on; if (on && chat.unread) { chat.unre
 
 /** Someone in the office says something (the office's life, from the module where it happens; on the Mac only). */
 export function chatSay(from, text, opts = {}) {
-  if (replay.on || (!text && opts.sticker == null && !opts.photo)) return;
+  if ((!text && opts.sticker == null && !opts.photo)) return;
   if (engine) { engine.say(from, text, opts); return; }
   if (!state.isLocal) return;   // (a phone shows the conversation; the Mac's page tells the office's life)
   const p = who(from); if (!p) return;
   post({ op: 'say', from: p.key, text, key: opts.key, sticker: opts.sticker, photo: opts.photo || undefined, pin: !!opts.pin, delay: opts.delay, react: opts.react, reacts: opts.reacts, answer: opts.answer });
 }
 // the work events: the server writes those itself (life/incidents.js calls this; only the demo needs it)
-export function chatEvent(e) { if (engine && !replay.on && !e.quiet) engine.onEvent({ ...e, limit: String(e.text || e.label || '').startsWith(tr('server.event.limitHit')) }); }
-export function chatLeft(s) { if (engine && s && !replay.on) engine.onLeft(dn(s)); }
+export function chatEvent(e) { if (engine && !e.quiet) engine.onEvent({ ...e, limit: String(e.text || e.label || '').startsWith(tr('server.event.limitHit')) }); }
+export function chatLeft(s) { if (engine && s) engine.onLeft(dn(s)); }
 export function chatMoved(names, to) { if (!engine) return; for (const s of sessions.values()) if (names.includes(dn(s))) engine.onMoved(s.id, to); }
 
 /* ---------- life in the office (called from the modules where it happens) ---------- */
@@ -99,7 +99,7 @@ const lastLife = new Map();
  *  why, every). The morning hello, the lunch poll and the reminders come by the clock, from the engine. */
 export function chatLife(kind, v = {}) {
   const every = v.every ?? 20 * 60e3, now = Date.now(), lk = `${kind}:${v.id || ''}`;
-  if (replay.on || (lastLife.get(lk) || 0) > now) return;
+  if ((lastLife.get(lk) || 0) > now) return;
   if (lastLife.size > 200) for (const [k, until] of lastLife) if (until <= now) lastLife.delete(k);   // (one per person and kind: sessions come and go for months)
   lastLife.set(lk, now + every);
   const key = `life:${lk}:${Math.floor(now / every)}`;   // (two pages telling the same moment: one message)

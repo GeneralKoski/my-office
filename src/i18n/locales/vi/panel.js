@@ -4,9 +4,7 @@ export default {
   open3d: 'Mở văn phòng',
   open2d: 'Xem dạng danh sách',
   now: 'vừa xong',
-  answerInOffice: 'Trả lời trong văn phòng',
   until: 'Trả về IDE sau {s} giây',
-  failed: 'Chưa gửi được. Bấm lại nhé.',
   openWindow: 'Bấm: đưa cửa sổ của phiên này lên trước',
   // a session's card (src/panel/session-card.js)
   card: {

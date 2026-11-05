@@ -122,11 +122,7 @@ export default {
     planSub: 'Claude plan usage limit',
   },
   tips: {
-    title: 'Worth freeing up',
-    gain: 'could free about {size} of RAM',
-    none: 'Your {mac} is fine, nothing to free up yet.',
     gainRam: '+{size} RAM',
-    gainDisk: '+{size} disk',
   },
   dev: {
     title: 'Running dev servers',
@@ -141,7 +137,6 @@ export default {
     unused: 'Nobody has opened it for {time}',
   },
   claude: {
-    title: 'Claude sessions',
     hint: 'close idle sessions to free RAM, the history stays',
     busy: 'working',
     idle: 'idle {time}',
@@ -151,7 +146,6 @@ export default {
     you: "you're talking here",
   },
   apps: {
-    title: 'Apps using the most RAM',
     procs: { one: '{n} process · CPU {cpu}%', other: '{n} processes · CPU {cpu}%' },
     closeAbove: 'close it above',
     kept: 'kept',

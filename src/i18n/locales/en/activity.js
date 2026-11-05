@@ -52,9 +52,5 @@ export default {
   live: {
     on: 'receiving data',
     off: 'connection lost, retrying…',
-    otherProject: 'other',
-    team: 'Team {name}{more} · {n}',
-    teamShared: "{name}'s desks, shared with: {others}",
-    teamTitle: 'Desks of the {name} project',
   },
 };

@@ -89,7 +89,6 @@ export default {
     add: 'Ghim', remove: 'Bỏ ghim',
     empty: 'Chưa ghim điều gì.',
     said: 'Nhắc lại lần gần nhất lúc {time}.',
-    hook: 'Cần chạy lại node bin/cli.mjs install một lần để thêm hook nhắc lại.',
   },
   undo: {
     btn: '↶ Hoàn tác lượt cuối', title: 'Trả các file lượt cuối đã sửa về như trước lượt đó',

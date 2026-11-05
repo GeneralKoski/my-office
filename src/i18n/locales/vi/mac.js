@@ -119,11 +119,7 @@ export default {
     planSub: 'hạn mức gói Claude',
   },
   tips: {
-    title: 'Nên giải phóng',
-    gain: 'trả lại được khoảng {size} RAM',
-    none: 'Máy đang ổn, chưa có gì cần giải phóng.',
     gainRam: '+{size} RAM',
-    gainDisk: '+{size} ổ đĩa',
   },
   dev: {
     title: 'Dev server đang chạy',
@@ -138,7 +134,6 @@ export default {
     unused: 'Không ai mở {time}',
   },
   claude: {
-    title: 'Session Claude',
     hint: 'đóng session rảnh để trả RAM, lịch sử vẫn còn',
     busy: 'đang làm',
     idle: 'rảnh {time}',
@@ -148,7 +143,6 @@ export default {
     you: 'bạn đang nói chuyện ở đây',
   },
   apps: {
-    title: 'App dùng nhiều RAM',
     procs: '{n} tiến trình · CPU {cpu}%',
     closeAbove: 'đóng ở mục trên',
     kept: 'giữ lại',

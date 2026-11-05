@@ -1,6 +1,6 @@
 // Demo mode: fictional projects and a fictional Mac.
 import { state } from '../core/state.js';
-import { $, STATIC, officeNow, rand, replay } from '../core/env.js';
+import { $, STATIC, officeNow, rand } from '../core/env.js';
 import { sessions } from '../core/sessions.js';
 import { chatApply, chatLeft, chatLoad } from '../ui/group-chat.js';
 import { addFeed, queueFeed, queueUi, renderFeed, toast } from '../ui/activity.js';
@@ -211,7 +211,7 @@ export function startDemo() {
   // one scripted incident so the red alarm can be seen: three failing commands in a row
   demoLater(() => { const list = [...sessions.values()]; [0, 1, 2].forEach((k) => setTimeout(() => demoEmit(list[k % list.length], 'fail', tr('demo.incident')), k * 900)); }, 45000);
 }
-// One handler for the live stream and for replays. `quiet` (fast-forwarding a replay) places people without walking
+// One handler for the live stream. `quiet` (catching up after a reconnect) updates the state without the toasts and sounds
 // and fills the feed without bubbles or animations.
 // a newer office than this page (it was updated and restarted): load it, once nothing typed would be lost
 function reloadSoon() {
@@ -282,7 +282,7 @@ function ask() {
         if (r.status === 401) { location.reload(); return; }   // (signed out: back to the PIN)
         const j = await r.json();
         fails = 0; setConn(true); since = j.seq;
-        if (!replay.on) for (const d of j.msgs) applyMsg(d);
+        for (const d of j.msgs) applyMsg(d);
       } catch {
         if (stop.signal.aborted) return;
         setConn(false); await new Promise((ok) => setTimeout(ok, Math.min(15_000, 1000 * 2 ** fails++)));
@@ -297,7 +297,6 @@ export function connect() {
   es.onopen = () => setConn(true);
   es.onerror = () => setConn(false);
   es.onmessage = (m) => {
-    if (replay.on) return;
     let d; try { d = JSON.parse(m.data); } catch { return; }
     applyMsg(d);
   };

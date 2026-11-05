@@ -30,8 +30,6 @@
 .row-owner::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .row-owner--left { color: #FF8A80; }
 .row-owner--none { color: var(--muted); }
-.tag--lost { cursor: pointer; pointer-events: auto; border-color: rgba(255, 77, 77, .55); }
-.tag--lost i { width: 8px; height: 8px; border-radius: 50%; background: #FF4D4D; box-shadow: 0 0 8px #FF4D4D; }
 .row-num { font-size: .78rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 
 /* the verdict: why the machine is slow, in one sentence, and the one thing to do */

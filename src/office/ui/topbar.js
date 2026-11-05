@@ -1,6 +1,6 @@
 // Phone modal, notifications.
 import { state } from '../core/state.js';
-import { $, el, replay, small } from '../core/env.js';
+import { $, el, small } from '../core/env.js';
 import { dn } from '../core/sessions.js';
 import { toast } from './activity.js';
 import { closeSession, drM, drS, openSession } from './session-drawer.js';
@@ -12,7 +12,6 @@ import { pushOff, pushOn, pushState, pushTest } from './notify.js';
 export let bellOn = false;
 export function renderBell() { $('btn-bell').setAttribute('aria-pressed', String(bellOn)); }
 export function notifyWait(s, e) {
-  if (replay.on) return;
   if (!bellOn || document.visibilityState === 'visible' && document.hasFocus()) return;
   try { const n = new Notification(tr('topbar.waitTitle', { name: dn(s) }), { body: e.label || tr('topbar.waitBody'), tag: 'wait-' + s.id }); n.onclick = () => { window.focus(); openSession(s.id); n.close(); }; } catch { /* unsupported */ }
 }

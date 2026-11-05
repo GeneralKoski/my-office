@@ -1,7 +1,6 @@
 // Boots the office: the 2D list of sessions. Every module's setup() runs once, in this order: the basics, the
 // sessions and the top bar, then the drawers, the group chat, the live connection (or the demo).
 import * as coreEnv from './core/env.js';
-import * as uiEventText from './ui/event-text.js';
 import * as uiIcons from './ui/icons.js';
 import * as uiLite from './ui/lite.js';
 import * as uiActivity from './ui/activity.js';
@@ -28,7 +27,6 @@ import * as demoDemo from './demo/demo.js';
 
 const MODULES = [
   coreEnv,
-  uiEventText,
   uiIcons,
   uiLite,
   uiActivity,

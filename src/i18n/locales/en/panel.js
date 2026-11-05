@@ -4,9 +4,7 @@ export default {
   open3d: 'Open the office',
   open2d: 'List view',
   now: 'just now',
-  answerInOffice: 'Answer in the office',
   until: 'Back to the IDE in {s} s',
-  failed: "Couldn't send. Try again.",
   openWindow: 'Click: bring its window to the front',
   // a session's card (src/panel/session-card.js)
   card: {

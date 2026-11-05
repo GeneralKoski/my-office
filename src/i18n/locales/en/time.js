@@ -7,7 +7,6 @@ export default {
   day: { one: '{n} day', other: '{n} days' },
   dayHour: '{d} d {h} h',
   ago: '{time} ago',
-  justNow: 'just now',
   gb: '{n} GB',
   mb: '{n} MB',
 };

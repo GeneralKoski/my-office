@@ -1,34 +1,7 @@
 export default {
   language: 'Language',
   switchingLang: 'Switching language…',
-  toPro: 'Building the company office…',
-  toHq: 'Building headquarters…',
-  toCozy: 'Heading back to the cozy office…',
-  seasonOn: 'Turning on seasonal decorations…',
-  seasonOff: 'Turning off seasonal decorations…',
-  graphics: 'Graphics',
-  q: { auto: 'Auto', low: 'Low', medium: 'Medium', high: 'High' },
-  qNow: 'In use: {level}. Lower it if the office feels slow or the fans spin up.',
-  qDropped: 'The office was slow, so graphics went down to {level}. Change it in Settings → Graphics.',
   tabs: { office: 'Office', people: 'Characters', display: 'Display', more: 'More' },
-  layouts: {
-    cozy: { name: 'Cozy', sub: 'One open room · 9 desks' },
-    pro: { name: 'Company', sub: 'A whole floor · 12 desks' },
-    hq: { name: 'Headquarters', sub: 'Four departments · 44 desks' },
-  },
-  layoutNote: 'Changing the floor plan rebuilds the office: the page reloads and your sessions come straight back.',
-  times: {
-    auto: { name: 'Auto', sub: 'Follows the clock' },
-    day: { name: 'Day', sub: 'Always daylight' },
-    night: { name: 'Night', sub: 'Lamps and city lights' },
-  },
-  looks: {
-    toy: { sub: 'Round and glossy, like a vinyl figure' },
-    pixar: { sub: 'Big eyes and layered hair, like an animated film' },
-  },
-  lookNote: 'Every person in the office changes at once, including you in Walk in mode.',
-  qSub: { auto: 'Steps down if slow', low: 'Light, saves battery', medium: 'Balanced', high: 'Sharpest, soft shadows' },
-  weatherOff: 'Off',
   notify: 'Phone and alerts',
   phoneNote: 'Approve and watch from your phone',
   bellNote: 'A desktop alert when Claude needs you',
@@ -60,12 +33,5 @@ export default {
     after: 'Block after', tries: { one: '{n} failure', other: '{n} failures' },
     costAfter: 'Spending with no file edited for', mins: '{n} min',
     install: 'Run `node bin/cli.mjs install` once more so Claude Code checks with the office before each step.',
-  },
-  // Settings → More: the farewell for a project quiet for a long while (people/farewell.js, server/tenure.mjs)
-  farewell: {
-    title: 'Farewells',
-    on: 'Say goodbye to projects gone quiet',
-    note: 'A project that really was at work (two days or more) and has had no session for a long while gets a last afternoon: its person packs the desk into a box, everyone signs a card, a small cake, a group photo, the badge handed back to HR. It is only a scene in the office: nothing about the project is touched. Open the project again and its person comes back to the old company.',
-    after: 'After no work for', days: { one: '{n} day', other: '{n} days' },
   },
 };

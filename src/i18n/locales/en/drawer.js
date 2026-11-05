@@ -95,7 +95,6 @@ export default {
     add: 'Pin', remove: 'Unpin',
     empty: 'Nothing pinned yet.',
     said: 'Last said again at {time}.',
-    hook: 'Run node bin/cli.mjs install once more to add the hook that says them again.',
   },
   undo: {
     btn: '↶ Undo last turn', title: "Put the files the last turn changed back as they were before it",

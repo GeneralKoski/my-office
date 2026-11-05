@@ -4,7 +4,7 @@
 //   t('activity.empty')                     -> 'Nothing yet'
 //   t('mac.freed', { size: '1.2 GB' })      -> 'Freed about 1.2 GB.'
 //   t('time.min', { n: 3 })                 -> { one: '{n} minute', other: '{n} minutes' } picks by n
-//   t('people.poke', null, 'list')          -> the whole array, for lines picked at random
+//   t('mac.plan.weekdays', null, 'list')    -> the whole array, for lines picked at random
 //
 // A value is a string with {name} slots, a { one, other } pair chosen by vars.n (Intl.PluralRules), an array, or, for the
 // rare sentence the slots cannot express, a function (vars, t) => string. Numbers are not formatted for you: pass

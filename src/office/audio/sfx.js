@@ -1,5 +1,5 @@
 // Sounds, synthesized in the browser.
-import { reduceMotion, replay } from '../core/env.js';
+import { reduceMotion } from '../core/env.js';
 
 export let sfx;
 
@@ -66,7 +66,7 @@ export function setup() {
       get on() { return on; },
       set(v) { on = v; try { localStorage.setItem('office-sound', v ? 'on' : 'off'); } catch { /* storage blocked */ } if (v) unlock(); },
       play(name) {
-        if (!on || replay.on || !ctx || ctx.state !== 'running' || reduceMotion && name === 'key') return;
+        if (!on || !ctx || ctx.state !== 'running' || reduceMotion && name === 'key') return;
         const now = ctx.currentTime; if (now - (last.get(name) ?? -9) < (GAP[name] || 0.2)) return;
         last.set(name, now); SOUNDS[name]?.(now + 0.01);
       },

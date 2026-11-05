@@ -1,13 +1,7 @@
-// How events read on screen (ui/event-text.js): the lines in the feed and the session drawer, the speech bubbles over the
-// characters. Bubbles sit over people's heads, so keep them short.
+// How events read on screen (ui/event-text.js): the lines in the feed and the session drawer.
 export default {
   // a session's state in the list and the drawer
   status: { work: 'working', wait: 'needs approval', rest: 'resting' },
-  // where people go for each kind of work
-  station: {
-    dining: 'dining room', board: 'whiteboard', library: 'library', desk: 'desk', server: 'server room', globe: 'window',
-    coffee: 'coffee corner', meeting: 'meeting room', director: "director's office", wc: 'restroom', tests: 'test board', post: 'post box',
-  },
   // one line per event, for the feed and the drawer (the first letter is capitalised where it starts a line)
   verb: {
     prompt: 'new task: “{label}”',
@@ -47,20 +41,5 @@ export default {
     testok: 'tests pass ✅ ({label})',
     testfail: 'tests fail ❌ ({label})',
     use: 'use {label}',
-  },
-  // speech bubbles over the characters
-  bubble: {
-    wait: 'Needs approval: {label}',
-    ask: 'A question for you',
-    fail: 'Error: {label}',
-    stop: 'All done',
-    interrupt: 'Stopped, as you asked',
-    idle: 'Waiting for you',
-    compact: 'Compacting history',
-    agent: 'Handing off to {label}',
-    deploy: 'Deploying {label}',
-    plan: 'Updating the to-do list',
-    testok: ['All green! ✅', 'Tests pass 🎉', 'Not a single failure!'],
-    testfail: ['Red. Let me look…', 'One test broke, on it', 'Huh, why is that red 🤔'],
   },
 };
