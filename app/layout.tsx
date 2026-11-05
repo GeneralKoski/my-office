@@ -45,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { absolute: 'My Office' }, description, applicationName: 'My Office',
     // (on an iPhone's home screen: full screen, its own name; the manifest is app/manifest.ts)
     appleWebApp: { capable: true, title: 'My Office', statusBarStyle: 'black-translucent' }, formatDetection: { telephone: false },
-    keywords: ['Claude Code', 'AI agents', '3D office', 'developer tools', 'văn phòng 3D', 'Claude Code dashboard'],
+    keywords: ['Claude Code', 'AI agents', 'developer tools', 'Claude Code dashboard'],
     openGraph: { type: 'website', siteName: 'My Office', title, description, locale: lang === 'vi' ? 'vi_VN' : 'en_US', ...(SITE && { url }) },
     twitter: { card: 'summary_large_image', title, description },
     ...(SITE && { alternates: { canonical: url, languages: { en: at('/'), vi: at('/vi/') } } }),

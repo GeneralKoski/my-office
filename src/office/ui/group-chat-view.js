@@ -13,8 +13,7 @@ import { $, STATIC, el } from '../core/env.js';
 import { state } from '../core/state.js';
 import { icon } from './icons.js';
 import { avatar } from './chat-avatars.js';
-import { photoOn } from './photo.js';
-import { dn, sessions } from '../people/workers.js';
+import { dn, sessions } from '../core/sessions.js';
 import { openTaskSheet, dictate, shrink } from './task-sheet.js';
 import { openBurn } from './burn.js';
 import { openVault } from './vault.js';
@@ -25,7 +24,7 @@ import { denyCard, denyPeek } from './denied-card.js';
 import { cacheWords } from './cache-words.js';
 import { TOKEN } from '../net/live.js';
 import { pushOn, pushState, pushTest } from './notify.js';
-import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
+import { REACTIONS, byId, chat, chatPoll, chatSend, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
 import { coach, numberTasks } from '../../shared/prompt-coach.js';
 import { t as tr, lang, locale } from '../../i18n/index.js';
 
@@ -352,7 +351,7 @@ function groupAvatar(size = 40) {
 // a small card by the button for a new message while the window is shut (like a conversation in the app's list)
 let peekTimer = 0;
 function peek(m) {
-  if (chat.open || m.kind === 'sys' || m.from === 'me' || photoOn() || document.body.classList.contains('is-lite')) return;
+  if (chat.open || m.kind === 'sys' || m.from === 'me' || document.body.classList.contains('is-lite')) return;
   let p = $('zc-peek'); if (!p) { p = el('button', 'zc-peek'); p.id = 'zc-peek'; p.type = 'button'; p.addEventListener('click', () => toggle(true)); document.body.append(p); }
   if (m.kind === 'work') return;   // (a card at work: its answer is the news)
   const txt = m.kind === 'loop' ? loopPeek(m) : m.kind === 'ci' ? ciPeek(m) : m.kind === 'deny' ? denyPeek(m) : m.kind === 'text' ? String(m.text || '') : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
@@ -437,7 +436,7 @@ function drawTarget() {
   root.classList.toggle('is-to', !!target);
   input.maxLength = target ? 4000 : 600;   // (work for Claude takes up to 4000 characters, server/tasks.mjs; the group's chat 600)
   if (target?.sid) { const c = el('button', 'zc-ib zc-to-conv'); c.type = 'button'; c.title = tr('chat.conv.open'); c.append(el('span', null, '📜')); c.addEventListener('click', () => openConv(target)); toEl.insertBefore(c, toEl.querySelector('.zc-to-x')); }
-  for (const b of root.querySelectorAll('.zc-photo-btn')) b.hidden = !state.isLocal && !target;   // (to Claude: a photo from this device; to the group: a photo of the office, the Mac's)
+  for (const b of root.querySelectorAll('.zc-photo-btn')) b.hidden = !target;   // (to Claude: a photo from this device)
   drawQuick(); if (!target) { attach = []; drawAttach(); }
   drawCoach();
 }
@@ -847,8 +846,8 @@ function build() {
   const replyX = el('button', 'zc-ib zc-reply-x'); replyX.type = 'button'; replyX.title = tr('chat.cancel'); replyX.append(icon('x')); replyX.addEventListener('click', () => { setReply(null); if (steerTo) setSteer(null); });
   const replyText = el('span', 'zc-reply-q'); replyText.append(el('b'), el('span', 'zc-reply-t'));
   replyEl.append(icon('reply'), replyText, replyX);
-  // a computer's toolbar over the input: stickers, a photo of the office, a file, a card, a poll, @, more
-  const photoBtn = (cls) => { const b = ib('image', tr('chat.sendPhoto'), () => (target ? pickPhotos() : chatSendPhoto()), `${cls} zc-photo-btn`); b.hidden = !state.isLocal; return b; };   // (to the group: a photo of the office as it is now, taken on the Mac; to Claude: one of yours)
+  // a computer's toolbar over the input: stickers, a photo, a file, a card, a poll, @, more
+  const photoBtn = (cls) => { const b = ib('image', tr('chat.sendPhoto'), pickPhotos, `${cls} zc-photo-btn`); b.hidden = !target; return b; };   // (to Claude: one of yours; hidden in the group)
   const atBtn = () => { moreEl.hidden = true; input.focus(); input.setRangeText(input.value && !/\s$/.test(input.value) ? ' @' : '@', input.selectionStart, input.selectionEnd, 'end'); mentions(); };
   const toolbar = el('div', 'zc-toolbar zc-pc');
   toolbar.append(ib('smile', tr('chat.stickerTab'), () => openStickers('sticker')), photoBtn(''), ib('clip', ''), ib('card', ''), ib('chart', tr('chat.newPoll'), openMore), ib('at', tr('chat.mention'), atBtn),

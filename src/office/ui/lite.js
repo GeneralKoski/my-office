@@ -1,19 +1,12 @@
-// The 2D view: every session as a row, no 3D (a page that opens in it builds no 3D world until asked, core/world-boot.js;
-// switched to later, the office keeps a frame a second behind it). Approvals on top, then
+// The page's one view, the list: every session as a row. Approvals on top, then
 // needs you → working → resting; filter tabs, a search, and per row the conversation, its project and branch, what it
-// is doing now, its checklist, its context, its time and its cost. A click opens the session's drawer. Kept per
-// browser (office-lite); the top bar's 3D | 2D switch and the toolbar's list button both turn it on and off. Saves the
+// is doing now, its checklist, its context, its time and its cost. A click opens the session's drawer. Saves the
 // battery on a phone and works without WebGL. First idea from agent-office's lite page (MIT).
-import { state } from '../core/state.js';
 import { $, el, fmtAgo, fmtClock, nowMs, short } from '../core/env.js';
-import { needWorld } from '../core/world-boot.js';
-import { dn, sessions } from '../people/workers.js';
-import { toast } from './activity.js';
+import { dn, sessions } from '../core/sessions.js';
 import { icon, TYPE_ICON } from './icons.js';
 import { verb } from './event-text.js';
 import { openSession } from './session-drawer.js';
-import { closePlace } from '../interact/place-cards.js';
-import { exitFp, fp } from '../interact/first-person.js';
 import { t as tr } from '../../i18n/index.js';
 
 export let lite = false;
@@ -83,16 +76,13 @@ function build() {
   permHost = el('div', 'v2-perms'); listEl = el('div', 'v2-list'); emptyEl = el('p', 'v2-empty'); emptyEl.hidden = true;
   box.replaceChildren(head, permHost, listEl, emptyEl);
 }
-export function setLite(on) {
-  // opened in 2D: the 3D world is built now, a few seconds (the toast gets a frame to show first)
-  if (!on && !state.world) { toast(tr('lite.building')); setTimeout(() => { needWorld(); setLite(false); }, 50); return; }
-  lite = on; document.body.classList.toggle('is-lite', on); $('lite').hidden = !on; $('btn-lite').setAttribute('aria-pressed', String(on));
-  for (const b of document.querySelectorAll('[data-view]')) b.setAttribute('aria-pressed', String((b.dataset.view === '2d') === on));
-  try { localStorage.setItem('office-lite', on ? 'on' : 'off'); } catch { /* storage blocked */ }
-  // the approvals: at the top of the list in 2D, over the office in 3D
+export function setLite() {
+  lite = true; document.body.classList.add('is-lite'); $('lite').hidden = false;
+  // the approvals: at the top of the list
+  build();
   const stack = $('perm-stack');
-  if (on) { build(); if (stack && permHost && stack.parentNode !== permHost) permHost.append(stack); if (fp.on) exitFp(); closePlace(); renderLite(); }
-  else if (stack && stack.parentNode === permHost) $('lite').after(stack);
+  if (stack && permHost && stack.parentNode !== permHost) permHost.append(stack);
+  renderLite();
 }
 export function renderLite() {
   if (!lite || !listEl) return;
@@ -117,20 +107,12 @@ export function renderLite() {
   $('lite').scrollTop = top;
 }
 
-/** Whether the page opens in the 2D list (kept per browser, or ?view=2d): main.js then leaves the 3D world for later. */
-export function listAtStart() {
-  let saved = null; try { saved = localStorage.getItem('office-lite'); } catch { /* storage blocked */ }
-  const view = new URLSearchParams(location.search).get('view');
-  return view === '2d' || (view !== '3d' && saved !== 'off');
-}
 export function setup() {
-  lite = listAtStart();
-  $('btn-lite').addEventListener('click', () => setLite(!lite));
-  for (const b of document.querySelectorAll('[data-view]')) b.addEventListener('click', () => setLite(b.dataset.view === '2d'));
-  // "/" finds a session in 2D (not while typing somewhere)
+  lite = true; document.body.classList.add('is-lite');
+  // "/" finds a session (not while typing somewhere)
   document.addEventListener('keydown', (e) => {
     if (!lite || e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     e.preventDefault(); $('lite-q')?.focus();
   });
-  setInterval(() => { if (lite && document.visibilityState === 'visible') renderLite(); }, 2000);
+  setInterval(() => { if (document.visibilityState === 'visible') renderLite(); }, 2000);
 }

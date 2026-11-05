@@ -1,9 +1,9 @@
 // Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the card in the group chat (what repeats, Stop, a hint for
 // Claude) and the row in Settings → More (on or off, after how many failures, after how many minutes of spending with
-// nothing edited). The person's red "kẹt" tag is people/workers.js (setStuck), the line in the list ui/activity.js.
+// nothing edited). The line in the list is ui/activity.js.
 import { $, STATIC, el, short } from '../core/env.js';
 import { TOKEN } from '../net/live.js';
-import { sessions, dn } from '../people/workers.js';
+import { sessions, dn } from '../core/sessions.js';
 import { toast } from './activity.js';
 import { t as tr } from '../../i18n/index.js';
 

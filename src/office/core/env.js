@@ -1,5 +1,4 @@
 // Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting.
-import * as THREE from 'three';
 import { t, num } from '../../i18n/index.js';
 import { TET } from '../../shared/workdays.js';
 
@@ -13,7 +12,6 @@ export let PRO;
 export let HQ;
 export const PLANS = ['cozy', 'pro', 'hq'];
 export let small;
-export const V2 = THREE.Vector2;
 export const rand = (a, b) => a + Math.random() * (b - a);
 export const randInt = (a, b) => Math.floor(rand(a, b + 1));
 export const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -29,7 +27,6 @@ export const officeNow = () => new Date(nowMs() + AT_SHIFT);
 // off; ?season=halloween|noel|tet|none overrides it.
 export let SEASON;
 export const hhmm = (ts = nowMs(), sec = false) => { const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}` + (sec ? `:${pad2(d.getSeconds())}` : ''); };
-export const tint = (hex, amt) => '#' + new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), amt).getHexString();
 export const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 export const GB = 1024 ** 3;
 export const fmtBytes = (b) => (b >= GB ? t('time.gb', { n: num(b / GB, b >= 10 * GB ? 0 : 1) }) : t('time.mb', { n: num(Math.max(1, Math.round(b / 1024 ** 2))) }));

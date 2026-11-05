@@ -3,7 +3,7 @@
 // message that carries the conversation on. Then it says what was done, and when the CI is green again.
 import { STATIC, el, short } from '../core/env.js';
 import { TOKEN } from '../net/live.js';
-import { sessions, dn } from '../people/workers.js';
+import { sessions, dn } from '../core/sessions.js';
 import { toast } from './activity.js';
 import { t as tr } from '../../i18n/index.js';
 

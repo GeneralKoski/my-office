@@ -1,9 +1,8 @@
-// How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js; the cups on the desks
-// are world/props/cups.js): the line under the session drawer's folder, the one under the chat's "Gửi tới" and in its
+// How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js): the line under the session drawer's folder, the one under the chat's "Gửi tới" and in its
 // list of conversations.
 import { $, nowMs } from '../core/env.js';
 import { state } from '../core/state.js';
-import { sessions } from '../people/workers.js';
+import { sessions } from '../core/sessions.js';
 import { cacheClock } from '../../shared/cache-clock.js';
 import { t as tr, num } from '../../i18n/index.js';
 

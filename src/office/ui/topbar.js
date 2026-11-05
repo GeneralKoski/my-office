@@ -1,16 +1,11 @@
-// Phone modal, notifications, the night switch.
+// Phone modal, notifications.
 import { state } from '../core/state.js';
-import { needWorld } from '../core/world-boot.js';
 import { $, el, replay, small } from '../core/env.js';
-import { dn } from '../people/workers.js';
-import { night, setNight } from '../world/room-update.js';
+import { dn } from '../core/sessions.js';
 import { toast } from './activity.js';
 import { closeSession, drM, drS, openSession } from './session-drawer.js';
 import { closeMac } from './mac-drawer.js';
-import { closePlace, plcState } from '../interact/place-cards.js';
 import { popLook, togglePlan, togglePop } from './settings.js';
-import { exitFp, fp } from '../interact/first-person.js';
-import { closeTimeline } from '../replay/timeline.js';
 import { t as tr } from '../../i18n/index.js';
 import { pushOff, pushOn, pushState, pushTest } from './notify.js';
 
@@ -211,7 +206,7 @@ function phoneSide(body) {
 }
 
 export function setup() {
-  /* ---------- phone modal, bell, night, closing ---------- */
+  /* ---------- phone modal, bell, closing ---------- */
   state.lanUrl = null; state.lanBase = null; state.phonePin = null;
   $('btn-phone')?.addEventListener('click', () => { $('phone-modal').hidden = false; renderPhone(); if (state.isLocal) loadTunnel().then(renderPhone); });
   try { bellOn = localStorage.getItem('office-bell') === '1' && Notification.permission === 'granted'; } catch { /* storage blocked */ }
@@ -220,14 +215,13 @@ export function setup() {
     bellOn = !bellOn; try { localStorage.setItem('office-bell', bellOn ? '1' : '0'); } catch { /* ignore */ }
     renderBell(); toast(tr(bellOn ? 'topbar.bellOn' : 'topbar.bellOff'));
   });
-  $('btn-night').addEventListener('click', () => { needWorld(); state.nightManual = true; setNight(!night); });
   document.addEventListener('click', (ev) => {
     const c = ev.target.closest('[data-close]'); if (!c) return;
     if (c.closest('#dr-session')) closeSession(); else if (c.closest('#dr-mac')) closeMac(); else if (c.closest('#phone-modal')) $('phone-modal').hidden = true;
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
-    if (!$('tl').hidden) closeTimeline(); else if (plcState.id) closePlace(); else if (!popLook.hidden) togglePop(false); else if (!$('pop-plan').hidden) togglePlan(false); else if (!$('phone-modal').hidden) $('phone-modal').hidden = true; else if (!drS.hidden) closeSession(); else if (!drM.hidden) closeMac(); else if (fp.on) exitFp();
+    if (!popLook.hidden) togglePop(false); else if (!$('pop-plan').hidden) togglePlan(false); else if (!$('phone-modal').hidden) $('phone-modal').hidden = true; else if (!drS.hidden) closeSession(); else if (!drM.hidden) closeMac();
   });
   $('feed-toggle').addEventListener('click', () => { if (!small.matches) return; const open = $('feed').classList.toggle('feed--open'); $('feed-toggle').setAttribute('aria-expanded', String(open)); });
 }
