@@ -345,7 +345,7 @@ export function setup() {
     // been resting); a different line each click
     poke() {
       const s = sessions.get(this.id); if (!s) return;
-      const done = state.streamer ? '' : short(s.lastPrompt || '', 34), ago = fmtAgo(Math.max(60, (nowMs() - (s.doneAt || s.lastAt || nowMs())) / 1000));
+      const done = short(s.lastPrompt || '', 34), ago = fmtAgo(Math.max(60, (nowMs() - (s.doneAt || s.lastAt || nowMs())) / 1000));
       const P = (key, vars) => tr(`people.poke.${key}`, vars);
       const lines = [
         done ? P('doneNamed', { done }) : P('done'),
@@ -410,7 +410,7 @@ export function setup() {
       const R = (key, vars) => tr(`people.rouse.${key}`, vars);
       sfx.play('pop');
       if (this.rousedN >= 4) { this.say('idle', R('ignore'), 'rest'); this.pokeHushAt = state.sim + 3.5; return true; }
-      const done = state.streamer ? '' : short(s.lastPrompt || '', 34), ago = fmtAgo(Math.max(60, (nowMs() - (s.doneAt || s.lastAt || nowMs())) / 1000));
+      const done = short(s.lastPrompt || '', 34), ago = fmtAgo(Math.max(60, (nowMs() - (s.doneAt || s.lastAt || nowMs())) / 1000));
       const first = [R('hi'), done ? tr('people.poke.doneNamed', { done }) : tr('people.poke.done'), tr('people.poke.resting', { ago }), tr('people.poke.boss'), tr('people.poke.charging')];
       const text = this.rousedN === 1 ? first[randInt(0, first.length - 1)] : R(this.rousedN === 2 ? 'again' : 'last');
       this.errand({ type: 'idle', anim: 'wake', wait: 0, hold: 1.6, anim2: 'idle', linger: 3.2, line: R('stir'),

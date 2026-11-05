@@ -7,13 +7,9 @@ export default {
   empty: 'No Claude Code sessions open yet.',
   subs: { one: '{n} subagent', other: '{n} subagents' },
   ctx: 'context {pct}%',
-  cacheWarm: '☕ warm {n} min',
-  cacheCold: '☕ cold',
   title: 'Claude sessions',
-  feed: 'Activity',
   all: 'All',
   search: 'Find a session, project, branch…  (/)',
   none: 'No session matches “{q}”.',
-  todoTitle: 'Checklist: {done} of {n} done',
   now: { wait: 'Waiting for your approval', waitOn: 'Waiting for you: {what}', done: 'Done' },
 };

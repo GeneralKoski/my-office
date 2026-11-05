@@ -14,7 +14,7 @@
 .is-phone .tb-brand > span:not(.logo):not(.demo-chip), .is-phone .demo-more, .is-phone .replay-chip { display: none; }
 .is-phone .tb-brand .demo-chip { padding: 3px 7px; font-size: .62rem; }
 .is-phone .tb-actions { gap: 6px; overflow: hidden; }
-.is-phone #btn-chat, .is-phone #btn-replay, .is-phone #btn-phone-top, .is-phone #btn-night, .is-phone .mp-label, .is-phone .mp-bar { display: none !important; }
+.is-phone #btn-chat, .is-phone #btn-replay, .is-phone #btn-night, .is-phone .mp-label, .is-phone .mp-bar { display: none !important; }
 .is-phone .tb-btn { height: 38px; min-width: 40px; padding: 0 10px; justify-content: center; }
 .is-phone .mac-pill { gap: 7px; }
 .is-phone .mac-pill .mp-val { font-size: .78rem; max-width: 10ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

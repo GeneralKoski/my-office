@@ -8,7 +8,6 @@ export default {
   deployed: '🚀 {name} vừa deploy {label}',
   againFail: 'Lại lỗi nữa à! {text}',
   report: 'Báo cáo: xong “{task}”',
-  reportHidden: 'Báo cáo: xong “việc”',
   reportNoTask: 'Báo cáo: xong việc',
   reportLeft: 'Để báo cáo trên bàn sếp',
   turn: {

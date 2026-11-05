@@ -7,7 +7,6 @@
 // even at the lowest resolution step, it goes down one level and remembers that for this device. A remembered level is
 // tried one step higher again after three days, so a busy afternoon does not cap the office for good.
 import * as THREE from 'three';
-import { small } from '../core/env.js';
 import { SOFTWARE_GL, camera, composer, renderer, scene } from './renderer.js';
 import { sun } from './lights.js';
 

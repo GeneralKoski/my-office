@@ -16,7 +16,6 @@ export default {
   bossThanks: 'Got the report, thanks! 👍',
   bgWait: 'Waiting on a background job: {desc}',
   // the director, with your prompt
-  newTask: 'a new task',
   handOver: 'New task: “{what}”',
   leaveOnDesk: "Leaving it on {who}'s desk",
   directorThanks: 'Great work, thanks! 👍',

@@ -23,13 +23,13 @@ let bellRing = 0, cakeG = null, cakeGrow = 0, flames = [];
 let gathering = null;
 const TOP = 0.8;   // the meeting table's top, in both rooms
 
-// What someone says when it is their turn at the meeting: what they are on (never the prompt in streamer mode).
+// What someone says when it is their turn at the meeting: what they are on.
 function reportOf(w) {
   if (w.sub) return tr('people.meet.sub', { boss: short(dn(sessions.get(w.parent?.id)), 20) });
   const s = sessions.get(w.id);
   if (!s) return line('people.meet.fine');
   if (s.status === 'wait') return tr('people.meet.waiting');
-  const task = state.streamer ? '' : short(s.lastPrompt || '', 34);
+  const task = short(s.lastPrompt || '', 34);
   if (s.status === 'work') return task ? tr('people.meet.working', { task }) : line('people.meet.busy');
   return task ? tr('people.meet.done', { task }) : line('people.meet.idle');
 }

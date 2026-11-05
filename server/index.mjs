@@ -44,7 +44,7 @@ import { weekSummary } from './wrapped.mjs';
 import { createPrefs } from './prefs.mjs';
 import { createLoopGuard, LOOP_DEFAULTS, LOOP_MIN, LOOP_N } from './loops.mjs';
 import { createTenure, FAREWELL_DAYS, FAREWELL_DEFAULT } from './tenure.mjs';
-import { cacheClock, cacheFromResume, cacheFromStatus, cacheGuess } from '../src/shared/cache-clock.js';
+import { cacheFromResume, cacheFromStatus, cacheGuess } from '../src/shared/cache-clock.js';
 import { createOtel } from './otel.mjs';
 import { managedEnvs, otelOwner } from './otel-setup.mjs';
 import { pickLang, createT } from '../src/i18n/index.js';
@@ -1127,7 +1127,6 @@ async function onHook(p) {
       s.inTool = false;
       s.status = 'rest'; s.doneAt = now;
       if (!s.cacheExact) s.cache = cacheGuess(now, s.live?.ctx ?? s.usage?.ctx, ttlGuess());   // (no prompt_cache from the status line: the documented lifetime from now)
-      s.askedYou = /\?\W{0,4}$/.test(String(p.last_assistant_message || '').trim().slice(-400));   // (it ended its turn asking you something: the nudge below)
       trackBackground(s, p);
       s.lastReply = clip(redact(oneLine(typeof p.last_assistant_message === 'string' ? p.last_assistant_message : await lastReplyOf(s))), 240);
       e = mk('stop', clip(s.lastReply, 90));
@@ -1720,23 +1719,9 @@ function onStatus(p) {
 /* ---------- the prompt cache's clock ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js) ----------
    Per session: until when its cache stays warm and what the next message re-reads once it is cold, from the status
    line (prompt_cache), a resumed session's SessionStart, or, with neither, guessed from the end of its last turn and the
-   documented lifetime: an hour on a subscription (the plan's limits are known), five minutes otherwise. Optionally (off
-   unless you turn it on: Settings → More) a phone is told when a session waiting for your answer is about to go cold. */
+   documented lifetime: an hour on a subscription (the plan's limits are known), five minutes otherwise. */
 const ttlGuess = () => (planLimits?.windows?.length ? '1h' : '5m');
 const cacheOut = (s) => (s.cache ? { until: s.cache.until, ttl: s.cache.ttl, tokens: s.cache.tokens, guessed: !!s.cache.guessed } : null);
-const NUDGE_MS = 5 * 60e3;
-setInterval(() => {
-  if (!prefs.get('cacheNudge') || !push.count()) return;
-  const now = Date.now();
-  for (const s of sessions.values()) {
-    const k = cacheClock(s.cache, now);
-    // waiting for you: a question it ended its turn with, or one it holds open (a question, an approval)
-    const waits = s.status === 'wait' || (s.status === 'rest' && s.askedYou);
-    if (k.state !== 'warm' || k.left > NUDGE_MS || !waits || s.nudged === s.cache.until) continue;
-    s.nudged = s.cache.until;
-    pushOut({ title: tr('server.cache.nudgeTitle', { name: s.title || s.name, n: Math.max(1, Math.round(k.left / 60e3)) }), body: tr('server.cache.nudgeBody', { tokens: num(Math.round(k.tokens / 1000)) }), tag: `cache-${s.id}`, url: '/?chat' });
-  }
-}, 30_000).unref();
 
 /* ---------- plan usage read from Anthropic, the way the IDE's Usage panel does (allowed by the user, 27/10/2026) ----------
    Claude Code's own login is read from the macOS Keychain each time (never stored, logged or sent anywhere else), then
@@ -3026,15 +3011,6 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && url.pathname === '/api/cache') {   // the "about to go cold" notification: { nudge } (this computer only)
-    if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
-    readJson(req).then((b) => {
-      prefs.set('cacheNudge', b?.nudge ? true : undefined);
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} cache nudge ${b?.nudge ? 'on' : 'off'}\n`).catch(() => {});
-      json(res, 200, { ok: true, nudge: !!prefs.get('cacheNudge') });
-    });
-    return;
-  }
   if (req.method === 'POST' && url.pathname === '/api/prefs') {
     const sameOrigin = sameOriginOf(req);
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
@@ -3067,7 +3043,6 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
   if (url.pathname === '/api/loop') { json(res, 200, loopOut()); return; }
   if (url.pathname === '/api/tenure') { json(res, 200, tenureOut()); return; }
-  if (url.pathname === '/api/cache') { json(res, 200, { ok: true, nudge: !!prefs.get('cacheNudge') }); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
   if (url.pathname === '/api/quick') { let list = null; try { list = JSON.parse(fs.readFileSync(QUICK_FILE, 'utf8')); } catch { /* the page's own until you change them */ } json(res, 200, { ok: true, list }); return; }
   if (url.pathname === '/api/claude-version') { json(res, 200, { ok: true, ...claudeVersion.get() }); return; }   // (a new one: someone goes to Thế Giới Di Động, outings.js)

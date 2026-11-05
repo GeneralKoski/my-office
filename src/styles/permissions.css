@@ -33,7 +33,6 @@
 .pq-other:focus { border-color: var(--amber); }
 .pc-plan { margin-top: 10px; padding: 10px 13px; max-height: min(44vh, 340px); overflow-y: auto; border-radius: 10px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .08); font-size: .82rem; line-height: 1.55; }
 .pc-plan + .pq-other { margin-top: 8px; }
-.is-stream .pq-list, .is-stream .pc-plan { filter: blur(5px); user-select: none; }
 .pc-acts { display: flex; gap: 8px; margin: 12px 0 12px; }
 .pc-acts button { all: unset; height: 36px; padding: 0 14px; border-radius: 10px; font-size: .82rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; }
 .pc-acts button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }

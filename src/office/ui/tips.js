@@ -1,6 +1,6 @@
 // The first visit: a short tour of what you can click. One card at a time, pointing at the thing it is about (the
 // camera turns to it and it is outlined); clicking the thing itself does what it does and goes on to the next card.
-// Once seen it does not come back by itself: Settings → More → "Show the tour again", or ?tips.
+// Once seen it does not come back by itself (?tips shows it again).
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { state } from '../core/state.js';
 import { $, STATIC, el, replay } from '../core/env.js';
@@ -11,7 +11,6 @@ import { fp } from '../interact/first-person.js';
 import { cat } from '../world/props/cat.js';
 import { workers } from '../people/workers.js';
 import { lite } from './lite.js';
-import { togglePop } from './settings.js';
 import { t as tr } from '../../i18n/index.js';
 
 const KEY = 'office-tips';
@@ -111,5 +110,4 @@ export function setup() {
   asked = new URLSearchParams(location.search).has('tips');
   pending = !seen() || asked ? performance.now() + 4500 : 0;   // (real time: a slow machine's office clock lags)
   addEventListener('keydown', (e) => { if (tour && e.key === 'Escape') endTips(); });
-  $('btn-tips')?.addEventListener('click', () => { togglePop(false); startTips(); });
 }

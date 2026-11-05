@@ -2,15 +2,11 @@
 import { state } from '../core/state.js';
 import { needWorld } from '../core/world-boot.js';
 import { $, LAYOUT, PLANS, STATIC } from '../core/env.js';
-import { bubbleText } from './event-text.js';
 import { labels } from '../scene/renderer.js';
-import { subs, workers } from '../people/workers.js';
 import { isNightHour, night, setNight } from '../world/room-update.js';
-import { queueUi, renderFeed, toast } from './activity.js';
-import { renderChat, renderSessionHead, tab } from './session-drawer.js';
+import { toast } from './activity.js';
 import { renderLimits } from './mac-drawer.js';
 import { renderAi } from './ai-accounts.js';
-import { stickyNotes } from './whiteboard.js';
 import { setLook } from './look-switch.js';
 import { sfx } from '../audio/sfx.js';
 import { reportPresence } from './permissions.js';
@@ -44,9 +40,11 @@ function setLang(l) {
 }
 // the four tabs of Settings; the last one opened comes back next time
 const TABS = ['office', 'people', 'display', 'more'];
+// the office and the characters only mean something in 3D: the 2D list has neither (and no renderer to draw the portraits)
+const tabsNow = () => (document.body.classList.contains('is-lite') ? TABS.slice(2) : TABS);
 let tabNow = 'office';
 function showTab(k, focus = false) {
-  if (!TABS.includes(k)) k = 'office';
+  if (!tabsNow().includes(k)) k = tabsNow()[0];
   tabNow = k;
   for (const b of popLook.querySelectorAll('[data-st-tab]')) { const on = b.dataset.stTab === k; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); }
   for (const p of popLook.querySelectorAll('[data-st-panel]')) p.hidden = p.dataset.stPanel !== k;
@@ -57,19 +55,10 @@ export function togglePop(open = popLook.hidden) { popLook.hidden = !open; btnLo
 let popPlan;
 let btnPlan;
 export function togglePlan(open = popPlan.hidden) { popPlan.hidden = !open; btnPlan.setAttribute('aria-expanded', String(open)); if (open) { togglePop(false); renderLimits(); renderAi(); } }
-function setStreamer(v) {
-  state.streamer = v; document.body.classList.toggle('is-stream', v); state.boardDirty = true; for (const n of stickyNotes) if (n) n.key = '';
-  try { localStorage.setItem('office-stream', v ? 'on' : 'off'); } catch { /* storage blocked */ }
-  for (const w of [...workers.values(), ...subs.values()]) if (w.lastSay) { w.sayKey = ''; w.say(w.lastSay.type, w.lastSay.e ? bubbleText(w.lastSay.e) : w.lastSay.text, w.lastSay.kind); }
-  queueUi(); renderFeed(); if (state.selectedId) { renderSessionHead(); if (tab === 'chat') renderChat(false); }
-}
 function setToggle(k, v) {
   if (k === 'sound') sfx.set(v);
   if (k === 'autocam') { state.camAuto = v; try { localStorage.setItem('office-autocam', v ? 'on' : 'off'); } catch { /* storage blocked */ } }
   if (k === 'perm') { state.permOn = v; try { localStorage.setItem('office-perm', v ? 'on' : 'off'); } catch { /* storage blocked */ } reportPresence(); }
-  if (k === 'stream') setStreamer(v);
-  if (k === 'coach') { try { localStorage.setItem('office-coach', v ? 'on' : 'off'); } catch { /* storage blocked */ } }   // (the chat's prompt helper reads it as you type)
-  if (k === 'drill') { try { localStorage.setItem('office-drill', v ? 'on' : 'off'); } catch { /* storage blocked */ } }   // (life/drill.js reads it when the day comes)
   if (k === 'zones') { state.zonesOn = v; try { localStorage.setItem('office-zones', v ? 'on' : 'off'); } catch { /* storage blocked */ } }
   if (k === 'season') {   // decorations are built when the page loads
     try { localStorage.setItem('office-season', v ? 'on' : 'off'); } catch { /* storage blocked */ }
@@ -78,8 +67,8 @@ function setToggle(k, v) {
   syncToggles();
 }
 export function syncToggles() {
-  let seasonOn = true, coachOn = true, drillOn = true; try { seasonOn = localStorage.getItem('office-season') !== 'off'; coachOn = localStorage.getItem('office-coach') !== 'off'; drillOn = localStorage.getItem('office-drill') !== 'off'; } catch { /* storage blocked */ }
-  const val = { sound: sfx.on, autocam: state.camAuto, perm: state.permOn, stream: state.streamer, zones: state.zonesOn, season: seasonOn, coach: coachOn, drill: drillOn };
+  let seasonOn = true; try { seasonOn = localStorage.getItem('office-season') !== 'off'; } catch { /* storage blocked */ }
+  const val = { sound: sfx.on, autocam: state.camAuto, perm: state.permOn, zones: state.zonesOn, season: seasonOn };
   labels.domElement.classList.toggle('show-zones', state.zonesOn);
   for (const b of document.querySelectorAll('[data-tgl]')) b.setAttribute('aria-checked', String(!!val[b.dataset.tgl]));
 }
@@ -94,9 +83,9 @@ export function setup() {
   try { tabNow = localStorage.getItem('office-settings-tab') || 'office'; } catch { /* storage blocked */ }
   // tabs by keyboard: left / right / Home / End; Esc closes the panel
   popLook.querySelector('.st-tabs').addEventListener('keydown', (e) => {
-    const i = TABS.indexOf(tabNow), next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+    const T = tabsNow(), i = T.indexOf(tabNow), next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: T.length - 1 }[e.key];
     if (next === undefined) return;
-    e.preventDefault(); showTab(TABS[(next + TABS.length) % TABS.length], true);
+    e.preventDefault(); showTab(T[(next + T.length) % T.length], true);
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !popLook.hidden) { togglePop(false); btnLook.focus(); } });
   document.addEventListener('click', (e) => { if (!popLook.hidden && !e.target.closest('#pop-look, #btn-look')) togglePop(false); });
@@ -116,7 +105,6 @@ export function setup() {
     const qb = e.target.closest('[data-quality]'); if (qb) { needWorld(); setQuality(qb.dataset.quality); return; }
     const tg = e.target.closest('[data-tgl]'); if (tg) setToggle(tg.dataset.tgl, tg.getAttribute('aria-checked') !== 'true');
   });
-  document.body.classList.toggle('is-stream', state.streamer);
   // graphics: the picked button, and which level Auto is using now
   const syncQuality = () => {
     for (const b of document.querySelectorAll('[data-quality]')) b.setAttribute('aria-pressed', String(b.dataset.quality === quality.choice));

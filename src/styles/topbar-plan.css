@@ -96,7 +96,6 @@
 .plan-other .acct-meta { flex: 1 1 0; min-width: 0; }   /* (the plan gives way first, then the name) */
 .acct-head.is-editing .acct-meta, .acct-head.is-editing .acct-end { display: none; }
 .plan-other .acct-end { flex: none; display: inline-flex; align-items: center; gap: 6px; overflow: visible; font-size: inherit; color: inherit; }
-.is-stream .plan-other .acct-end { filter: none; }
 .acct-badge { font-style: normal; font-size: .62rem; font-weight: 700; line-height: 1; padding: 4px 8px; border-radius: 999px; white-space: nowrap; }
 .acct-badge--on { color: var(--accent-hi); background: var(--accent-soft); }
 .acct-badge--out { color: var(--amber); background: var(--amber-soft); }
@@ -144,4 +143,3 @@
 .ai-older { display: block; }
 .ai-step { margin-top: 4px; }
 .ai-add { margin-top: 4px; }
-.is-stream .ai-sub, .is-stream .ai-name { filter: blur(4px); }

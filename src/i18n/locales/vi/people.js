@@ -11,7 +11,6 @@ export default {
   subReportDone: 'xong việc',
   bossThanks: 'Nhận báo cáo, cảm ơn! 👍',
   bgWait: 'Đang chờ việc chạy nền: {desc}',
-  newTask: 'việc mới',
   handOver: 'Giao việc: “{what}”',
   leaveOnDesk: 'Để việc trên bàn {who}',
   directorThanks: 'Tốt lắm, cảm ơn! 👍',

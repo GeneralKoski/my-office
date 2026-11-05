@@ -72,7 +72,6 @@ export default {
     dirty: { one: '{n} uncommitted file', other: '{n} uncommitted files' },
     clean: 'all committed',
     ahead: { one: '{n} unpushed commit', other: '{n} unpushed commits' },
-    aRepo: 'a repo',
     git: 'Git and CI',
     recent: 'Just happened',
     empty: 'No commits, pushes or deploys since the office opened.',

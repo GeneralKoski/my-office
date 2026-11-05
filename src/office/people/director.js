@@ -83,7 +83,7 @@ export function setup() {
       if (!w || w.leaving) { this.job = null; this.paper.visible = false; return; }
       const near = w.phase !== 'walk' && !w.wcBusy && Math.hypot(w.pos.x - this.pos.x, w.pos.y - this.pos.y) < 1.7;
       j.stage = 'hand'; j.w = w; j.drop = !near && j.to.desk != null;
-      const who = short(dn(sessions.get(j.sess)), 22), what = state.streamer ? tr('people.newTask') : short(j.text, 44);
+      const who = short(dn(sessions.get(j.sess)), 22), what = short(j.text, 44);
       if (near) {   // hand it over
         this.faceTarget = Math.atan2(w.pos.x - this.pos.x, w.pos.y - this.pos.y); this.anim = 'globe'; j.until = state.sim + (reduceMotion ? 1.2 : 1.9);
         this.say('prompt', tr('people.handOver', { what }));

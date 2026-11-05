@@ -467,7 +467,6 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 
 - English or Vietnamese (Settings → Display).
 - Graphics: Auto, Low, Medium or High. Auto steps down by itself when frames come late, and remembers it per device.
-- Streamer mode blurs commands, paths and chat for recording.
 - **2D view** (3D | 2D in the top bar, or `?view=2d`): no 3D, just the sessions as rows, quiet on purpose. Approvals
   sit on top with their buttons, then needs you, working and resting; tabs count and filter them, a search (`/`) finds
   one by name, project or branch. Each row: the conversation, its project and branch (or the task it was given), what

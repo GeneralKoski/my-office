@@ -4,7 +4,6 @@ export default {
   done: 'Done',
   skip: 'Skip',
   step: '{n}/{total}',
-  again: 'Show the tour again',
   orClick: 'Or just click it.',
   lamp: { title: 'Desk lamp', text: 'Click to switch it. Switch off the lamp someone is working by and they complain, get up and switch it back on.' },
   switch: { title: 'The floor’s light switch', text: 'Lights out on the whole floor and everyone protests; someone goes and puts them back on.' },

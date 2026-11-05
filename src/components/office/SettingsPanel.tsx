@@ -109,23 +109,19 @@ export default async function SettingsPanel() {
           </div>
 
           <h3>{t('ui.topBar.more')}</h3>
-          <div className="pop-toggles">{toggle('zones', false)}{toggle('stream', false)}{toggle('autocam', true)}</div>
+          <div className="pop-toggles">{toggle('zones', false)}{toggle('autocam', true)}</div>
         </section>
 
         <section className="st-panel" id="st-panel-more" role="tabpanel" aria-labelledby="st-tab-more" data-st-panel="more" hidden>
           <div className="st-group">
           <h3>{t('settings.notify')}</h3>
-          <div className="pop-acts">
-            <button id="btn-phone" className="tb-btn" type="button" hidden><span data-icon="phone"></span><span className="lbl">{t('ui.topBar.phone')}</span></button>
-            <button id="btn-bell" className="tb-btn" type="button" aria-pressed="false" hidden><span data-icon="bell"></span><span className="lbl">{t('ui.topBar.bell')}</span><i className="badge" id="bell-dot" hidden></i></button>
+          <div className="st-acts">
+            <button id="btn-phone" className="st-act" type="button" hidden><span data-icon="phone"></span><b>{t('ui.topBar.phone')}</b><small>{t('settings.phoneNote')}</small></button>
+            <button id="btn-bell" className="st-act" type="button" aria-pressed="false" hidden><span data-icon="bell"></span><b>{t('ui.topBar.bell')}</b><small>{t('settings.bellNote')}</small><i className="badge" id="bell-dot" hidden></i></button>
           </div>
           </div>
-          <h3>{t('settings.chat')}</h3>
-          <div className="pop-toggles">{toggle('coach', true)}</div>
-          <p className="pop-note">{t('settings.coachNote')}</p>
           <h3>{t('settings.behaviour')}</h3>
-          <div className="pop-toggles">{toggle('sound', true)}{toggle('perm', true)}{toggle('drill', true)}</div>
-          <div className="pop-acts"><button id="btn-tips" className="tb-btn" type="button"><span data-icon="sparkle"></span><span className="lbl">{t('tips.again')}</span></button></div>
+          <div className="pop-toggles">{toggle('sound', true)}{toggle('perm', true)}</div>
           {/* the models of a session and its subagents (src/office/ui/models.js fills it in from the server; on the Mac only) */}
           <div className="st-loop" id="st-models" hidden>
             <h3>{t('settings.models.title')}</h3>
@@ -165,12 +161,6 @@ export default async function SettingsPanel() {
             <p className="pop-note">{t('settings.farewell.note')}</p>
             <div className="st-loop-row"><span>{t('settings.farewell.after')}</span>
               <div className="seg">{FAREWELL_DAYS.map((n) => <button key={n} type="button" data-fw-days={n} aria-pressed={n === 30 ? 'true' : 'false'}>{t('settings.farewell.days', { n })}</button>)}</div></div>
-          </div>
-          {/* the prompt cache's clock: the cups on the desks, and a phone told before a session waiting for you goes cold (src/office/ui/cache-words.js; hidden in the demo) */}
-          <div className="st-cache" id="st-cache" hidden>
-            <h3>{t('settings.cache.title')}</h3>
-            <p className="pop-note">{t('settings.cache.note')}</p>
-            <div className="pop-toggles"><button type="button" className="tgl" data-cache-nudge="" role="switch" aria-checked="false"><span>{t('settings.cache.nudge')}</span><i></i></button></div>
           </div>
         </section>
       </div>

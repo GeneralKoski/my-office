@@ -213,7 +213,7 @@ function phoneSide(body) {
 export function setup() {
   /* ---------- phone modal, bell, night, closing ---------- */
   state.lanUrl = null; state.lanBase = null; state.phonePin = null;
-  for (const id of ['btn-phone', 'btn-phone-top']) $(id)?.addEventListener('click', () => { $('phone-modal').hidden = false; renderPhone(); if (state.isLocal) loadTunnel().then(renderPhone); });
+  $('btn-phone')?.addEventListener('click', () => { $('phone-modal').hidden = false; renderPhone(); if (state.isLocal) loadTunnel().then(renderPhone); });
   try { bellOn = localStorage.getItem('office-bell') === '1' && Notification.permission === 'granted'; } catch { /* storage blocked */ }
   $('btn-bell').addEventListener('click', async () => {
     if (!bellOn && Notification.permission !== 'granted') { const p = await Notification.requestPermission(); if (p !== 'granted') { toast(tr('topbar.bellBlocked')); return; } }

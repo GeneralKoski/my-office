@@ -1,7 +1,6 @@
 // The week in review: a 1080 × 1350 picture card (the office as it looks right now, then the week's numbers) to save as
 // a PNG or copy, for sharing. The numbers come from /api/wrapped (the server reads its own replay logs); the demo
-// makes up a plausible week. In streamer mode project names are left out.
-import { state } from '../core/state.js';
+// makes up a plausible week.
 import { $ } from '../core/env.js';
 import { renderer } from '../scene/renderer.js';
 import { drawFrame } from '../scene/quality.js';
@@ -58,7 +57,7 @@ function draw(d, shot) {
   });
   // the week's highlights
   const top = d.projects?.[0], lines = [
-    top ? tr('wrapped.topProject', { name: state.streamer ? tr('wrapped.aProject') : top.name, ...hrs(top.hours) }) : null,
+    top ? tr('wrapped.topProject', { name: top.name, ...hrs(top.hours) }) : null,
     d.busiest ? tr('wrapped.busiestDay', { day: weekdayName(d.busiest.weekday), date: ddmm(d.busiest.day) }) : null,
     d.longestMin ? tr('wrapped.longest', { time: d.longestMin >= 60 ? tr('time.hourMin', { h: Math.floor(d.longestMin / 60), m: d.longestMin % 60 }) : tr('time.min', { n: d.longestMin }) }) : null,
     d.commits || d.pushes ? `${tr('wrapped.commits', { n: d.commits || 0, c: num(d.commits) })} · ${tr('wrapped.pushes', { n: d.pushes || 0, c: num(d.pushes) })}` : null,

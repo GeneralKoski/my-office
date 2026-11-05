@@ -68,7 +68,6 @@ export default {
     dirty: '{n} file chưa commit',
     clean: 'đã commit hết',
     ahead: '{n} commit chưa đẩy',
-    aRepo: 'một repo',
     git: 'Git và CI',
     recent: 'Vừa xảy ra',
     empty: 'Chưa có commit, push hay deploy nào từ khi văn phòng mở.',

@@ -18,7 +18,6 @@ export default {
   cmds: 'commands run',
   cost: 'API cost ≈',
   topProject: { one: '🏆 Busiest project: {name} · {h} hour', other: '🏆 Busiest project: {name} · {h} hours' },
-  aProject: 'a project',
   busiestDay: '📅 Busiest day: {day} {date}',
   longest: '⏱️ Longest unbroken run: {time}',
   commits: { one: '🖨️ {c} commit', other: '🖨️ {c} commits' },

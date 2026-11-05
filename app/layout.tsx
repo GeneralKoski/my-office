@@ -10,7 +10,6 @@ import '@/styles/topbar-plan.css';
 import '@/styles/sidebars.css';
 import '@/styles/activity.css';
 import '@/styles/sessions.css';
-import '@/styles/streamer.css';
 import '@/styles/permissions.css';
 import '@/styles/stage.css';
 import '@/styles/labels.css';

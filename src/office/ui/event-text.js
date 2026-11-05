@@ -1,7 +1,6 @@
-// How events read on screen: actions per event type, verbs, bubble text, streamer mode.
+// How events read on screen: actions per event type, verbs, bubble text.
 import { state } from '../core/state.js';
 import { PRO } from '../core/env.js';
-import { cap } from './activity.js';
 import { t as tr } from '../../i18n/index.js';
 
 /* ---------- how events look ---------- */
@@ -45,12 +44,9 @@ const translated = (keys, prefix) => Object.defineProperties({}, Object.fromEntr
 // Where each station is, in words (the coffee corner is the dining room on the company floor).
 let STATION_LABEL;
 export const STATUS_LABEL = translated(['work', 'wait', 'rest'], 'events.status');
-// Streamer mode: the event types whose label is replaced by a generic phrase (events.generic.<type>).
-const GENERIC = new Set(['prompt', 'read', 'grep', 'glob', 'skill', 'edit', 'write', 'bash', 'web', 'fetch', 'mcp', 'wait', 'fail', 'deploy', 'test']);
-export const lbl = (e) => (state.streamer && GENERIC.has(e.type) ? tr(`events.generic.${e.type}`) : e.label || '');
 const V = (key, vars) => tr(`events.verb.${key}`, vars);
 export function verb(e) {
-  const label = lbl(e);
+  const label = e.label || '';
   switch (e.type) {
     case 'prompt': return V('prompt', { label });
     case 'read': return V('read', { label });
@@ -73,8 +69,8 @@ export function verb(e) {
     case 'interrupt': return V('interrupt');
     case 'idle': return V('idle');
     case 'deploy': return V('deploy', { label });
-    case 'commit': return state.streamer ? V('commitHidden') : V('commit', { label });
-    case 'push': return V('push', { target: state.streamer ? 'git' : label });
+    case 'commit': return V('commit', { label });
+    case 'push': return V('push', { target: label });
     case 'release': return V('release', { tag: label });
     case 'cired': return V('ciRed', { label: label || V('ciRedDefault') });
     case 'cigreen': return V('ciGreen', { label: label || V('ciGreenDefault') });
@@ -89,7 +85,7 @@ export function verb(e) {
   }
 }
 export function bubbleText(e) {
-  const label = lbl(e), B = (key, vars) => tr(`events.bubble.${key}`, vars);
+  const label = e.label || '', B = (key, vars) => tr(`events.bubble.${key}`, vars);
   switch (e.type) {
     case 'wait': return B('wait', { label });
     case 'ask': return B('ask');
@@ -103,7 +99,7 @@ export function bubbleText(e) {
     case 'plan': return B('plan');
     case 'testok': return B('testok');
     case 'testfail': return B('testfail');
-    default: return state.streamer ? cap(verb(e)) : label || verb(e);
+    default: return label || verb(e);
   }
 }
 
@@ -116,10 +112,7 @@ export function setup() {
     coffee: { enumerable: true, get: () => tr(PRO ? 'events.station.dining' : 'events.station.coffee') },
     brief: { enumerable: true, get: () => tr('events.station.meeting') },
   });
-  // Streamer mode: any label that could carry a command, path, prompt or URL becomes a generic phrase.
-  state.streamer = false;
   // Zone names over the office show only while you point at their furniture, unless you ask for them always.
   state.zonesOn = false;
   try { state.zonesOn = localStorage.getItem('office-zones') === 'on'; } catch { /* storage blocked */ }
-  try { state.streamer = localStorage.getItem('office-stream') === 'on'; } catch { /* storage blocked */ }
 }

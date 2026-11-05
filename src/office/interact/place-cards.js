@@ -1,7 +1,7 @@
 // Place cards: what happens at each place.
 import { state } from '../core/state.js';
 import { $, el, fmtAgo, hhmm, nowMs, short, small, stage } from '../core/env.js';
-import { lbl, verb } from '../ui/event-text.js';
+import { verb } from '../ui/event-text.js';
 import { TYPE_ICON, icon } from '../ui/icons.js';
 import { camera, fpCam } from '../scene/renderer.js';
 import { lift } from '../world/entrance.js';
@@ -44,7 +44,7 @@ function nowChips(types, verbText) {
   const list = [...sessions.values()].filter((s) => s.status === 'work' && types.includes(s.last?.type));
   if (!list.length) return null;
   const box = el('div', 'pl-now');
-  for (const s of list) { const c = el('button', 'pl-chip'); c.type = 'button'; c.style.setProperty('--c', colorOf(s)); c.append(el('i'), el('b', null, dn(s)), document.createTextNode(` ${verbText} ${short(lbl(s.last), 28)}`)); c.addEventListener('click', () => openSession(s.id)); box.append(c); }
+  for (const s of list) { const c = el('button', 'pl-chip'); c.type = 'button'; c.style.setProperty('--c', colorOf(s)); c.append(el('i'), el('b', null, dn(s)), document.createTextNode(` ${verbText} ${short(s.last.label || '', 28)}`)); c.addEventListener('click', () => openSession(s.id)); box.append(c); }
   return box;
 }
 export const plButton = (text, run, cls = '') => { const b = el('button', 'btn btn--sm ' + cls, text); b.type = 'button'; b.addEventListener('click', run); return b; };
@@ -87,7 +87,7 @@ function placeContent(id) {
         for (const g of repos.values()) {
           const [ic, tone, ciText] = CI[g.ci] || ['file', null, ''];
           const meta = [g.dirty ? tr('places.deploy.dirty', { n: g.dirty }) : tr('places.deploy.clean'), g.ahead ? tr('places.deploy.ahead', { n: g.ahead }) : '', ciText ? `${ciText}${g.ciName ? ` · ${g.ciName}` : ''}` : ''].filter(Boolean).join(' · ');
-          box.append(plRow({ ic, tone, title: state.streamer ? tr('places.deploy.aRepo') : `${g.repo} · ${g.branch}`, meta, onClick: g.ciUrl && !state.streamer ? () => window.open(g.ciUrl, '_blank', 'noopener') : null }));
+          box.append(plRow({ ic, tone, title: `${g.repo} · ${g.branch}`, meta, onClick: g.ciUrl ? () => window.open(g.ciUrl, '_blank', 'noopener') : null }));
         }
         body.append(plGroup(tr('places.deploy.git')), box);
       }
@@ -134,8 +134,8 @@ function placeContent(id) {
     case 'board': return boardContent();
     case 'director': {
       const body = el('div'), box = el('div', 'pl-rows'), j = director.job;
-      if (j) box.append(plRow({ ic: 'clipboard', tone: 'amber', title: tr('places.director.carrying', { name: dn(sessions.get(j.sess)) || tr('places.director.aSession') }), meta: state.streamer ? '' : `“${short(j.text, 60)}”`, onClick: sessions.has(j.sess) ? () => openSession(j.sess) : null }));
-      for (const q of director.queue) box.append(plRow({ ic: 'clipboard', title: tr('places.director.queued', { name: dn(sessions.get(q.sess)) || tr('places.director.aSession') }), meta: state.streamer ? '' : `“${short(q.text, 60)}”` }));
+      if (j) box.append(plRow({ ic: 'clipboard', tone: 'amber', title: tr('places.director.carrying', { name: dn(sessions.get(j.sess)) || tr('places.director.aSession') }), meta: `“${short(j.text, 60)}”`, onClick: sessions.has(j.sess) ? () => openSession(j.sess) : null }));
+      for (const q of director.queue) box.append(plRow({ ic: 'clipboard', title: tr('places.director.queued', { name: dn(sessions.get(q.sess)) || tr('places.director.aSession') }), meta: `“${short(q.text, 60)}”` }));
       body.append(box.childElementCount ? box : plEmpty(tr('places.director.empty')));
       const ev = recentEvents(['prompt'], 6); if (ev.length) body.append(plGroup(tr('places.director.recent')), eventRows(ev));
       if (trophyData) body.append(...trophyRows(trophyData));

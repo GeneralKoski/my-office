@@ -14,7 +14,7 @@ export default async function TopBar() {
       </div>
       <div className="tb-actions">
         <div className="pop-wrap">
-          <button id="btn-plan" className="tb-btn mac-pill plan-pill" type="button" data-level="normal" aria-expanded="false" aria-controls="pop-plan" hidden><i className="lvl"></i><span className="mp-label">{t('ui.topBar.plan')}</span><span className="mp-val" id="plan-mini">{t('ui.topBar.reading')}</span><span className="mp-bar"><b id="plan-bar"></b></span></button>
+          <button id="btn-plan" className="tb-btn mac-pill plan-pill" type="button" data-level="normal" aria-expanded="false" aria-controls="pop-plan" hidden><i className="lvl"></i><span className="mp-label">{t('ui.topBar.plan')}</span><span className="mp-val" id="plan-lite"></span><span className="mp-val" id="plan-mini">{t('ui.topBar.reading')}</span><span className="mp-bar"><b id="plan-bar"></b></span></button>
           <div className="pop pop-plan" id="pop-plan" hidden role="dialog" aria-label={t('ui.topBar.planLimits')}>
             <div className="plan-card" id="plan-card">
               <span className="hl-head"><b id="plan-title">{t('ui.topBar.planLimits')}</b><span className="pl-at" id="plan-at"></span></span>
@@ -39,7 +39,6 @@ export default async function TopBar() {
           <button id="btn-look" className="tb-btn" type="button" aria-expanded="false" aria-controls="pop-look" title={t('ui.topBar.settingsTitle')}><span data-icon="gear"></span><span className="lbl">{t('ui.topBar.settings')}</span></button>
           <SettingsPanel />
         </div>
-        <button id="btn-phone-top" className="tb-btn tb-icon" type="button" hidden aria-label={t('ui.topBar.phone')} title={t('ui.topBar.phoneTitle')}><span data-icon="phone"></span></button>
         <button id="btn-night" className="tb-btn tb-icon" type="button" aria-pressed="false" aria-label={t('ui.topBar.nightLabel')} title={t('ui.topBar.nightTitle')}><span data-icon="moon"></span></button>
       </div>
     </header>

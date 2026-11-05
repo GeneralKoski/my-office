@@ -29,6 +29,8 @@ export default {
   lookNote: 'Mọi người trong văn phòng đổi cùng lúc, cả bạn khi Hoá thân.',
   qSub: { auto: 'Tự hạ khi giật', low: 'Nhẹ, đỡ tốn pin', medium: 'Cân bằng', high: 'Sắc nét, bóng mềm' },
   weatherOff: 'Tắt',
+  phoneNote: 'Duyệt và theo dõi từ điện thoại',
+  bellNote: 'Báo trên máy khi Claude cần bạn',
   notify: 'Điện thoại và thông báo',
   behaviour: 'Cách hoạt động',
   models: {
@@ -64,11 +66,4 @@ export default {
     note: 'Dự án từng làm thật (ít nhất hai ngày) mà lâu không mở phiên nào thì người của dự án lên công ty lần cuối: dọn bàn vào thùng, cả nhà ký thiệp, ăn bánh, chụp ảnh, trả thẻ cho chị nhân sự. Chỉ là cảnh trong văn phòng: không đụng gì tới dự án. Mở lại dự án là người đó "quay về công ty cũ".',
     after: 'Sau khi không làm', days: '{n} ngày',
   },
-  cache: {
-    title: 'Bộ nhớ đệm',
-    note: 'Mỗi bàn đang nghỉ có một tách cà phê: hơi bốc mờ dần khi bộ nhớ đệm của phiên nguội đi, tắt hẳn khi đã nguội. Nhắn tiếp lúc còn ấm thì rẻ; nguội rồi thì lần nhắn sau phải đọc lại cả cuộc trò chuyện.',
-    nudge: 'Báo điện thoại khi phiên đang chờ mình trả lời còn 5 phút là nguội',
-  },
-  chat: 'Nhóm chat',
-  coachNote: 'Khi “Gửi tới” một cuộc trò chuyện, trợ lý nhắc trên ô nhập những chỗ Claude dễ hiểu sai. Xem ngay trên máy này, không gửi đi đâu; chỉ nút “✨ Viết lại cho rõ” mới nhờ Claude.',
 };

@@ -10,7 +10,6 @@ export default {
   againFail: 'Not again! {text}',
   // a worker reporting a finished turn to the director
   report: 'Report: done with “{task}”',
-  reportHidden: 'Report: task done',
   reportNoTask: 'Report: all done',
   reportLeft: "Left it on the director's desk",
   turn: {

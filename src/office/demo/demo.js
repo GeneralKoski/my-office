@@ -245,7 +245,7 @@ export function applyMsg(d, quiet = false) {
       if (d.lift) setLiftService(d.lift);   // (the lift's servicing after the server started: life/lift-service.js)
       state.limits = d.limits || null; state.limitsNote = d.limitsNote || ''; for (const w of liveWindows()) if (w.pct >= 80) limitWarned.add(`${w.key}:${w.resetsAt}:${w.pct >= 95 ? 95 : 80}`); renderLimits();
       setAi(d.ai);   // (Codex's and Antigravity's accounts: ui/ai-accounts.js)
-      $('btn-phone').hidden = false; if ($('btn-phone-top')) $('btn-phone-top').hidden = !state.isLocal;   // (on a phone: its PIN, and what the Mac allows it)
+      $('btn-phone').hidden = false;   // (on a phone: its PIN, and what the Mac allows it)
       $('btn-bell').hidden = !('Notification' in window) || !window.isSecureContext;
     }
     state.connectedOnce = true; queueUi();

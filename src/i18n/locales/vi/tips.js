@@ -4,7 +4,6 @@ export default {
   done: 'Xong',
   skip: 'Bỏ qua',
   step: '{n}/{total}',
-  again: 'Xem lại hướng dẫn',
   orClick: 'Hoặc bấm thẳng vào nó.',
   lamp: { title: 'Đèn bàn', text: 'Bấm để bật, tắt. Tắt đèn chỗ người đang làm là họ phàn nàn rồi đứng dậy bật lại.' },
   switch: { title: 'Công tắc đèn cả tầng', text: 'Tắt đèn cả tầng thì mọi người kêu ầm lên, có người ra bật lại.' },

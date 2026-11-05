@@ -30,6 +30,8 @@ export default {
   qSub: { auto: 'Steps down if slow', low: 'Light, saves battery', medium: 'Balanced', high: 'Sharpest, soft shadows' },
   weatherOff: 'Off',
   notify: 'Phone and alerts',
+  phoneNote: 'Approve and watch from your phone',
+  bellNote: 'A desktop alert when Claude needs you',
   behaviour: 'Behaviour',
   // Settings → More: the models of a session and its subagents (ui/models.js, server/models.mjs)
   models: {
@@ -66,12 +68,4 @@ export default {
     note: 'A project that really was at work (two days or more) and has had no session for a long while gets a last afternoon: its person packs the desk into a box, everyone signs a card, a small cake, a group photo, the badge handed back to HR. It is only a scene in the office: nothing about the project is touched. Open the project again and its person comes back to the old company.',
     after: 'After no work for', days: { one: '{n} day', other: '{n} days' },
   },
-  // Settings → More: the prompt cache's clock (the cups on the desks)
-  cache: {
-    title: 'Prompt cache',
-    note: 'A cup of coffee on each resting desk: its steam fades as the session\'s prompt cache cools, gone once it is cold. Writing to the session while it is warm is cheap; once cold, the next message reads the whole conversation again.',
-    nudge: 'Tell my phone when a session waiting for my answer is 5 minutes from going cold',
-  },
-  chat: 'Group chat',
-  coachNote: 'When you write to a conversation (“To”), the helper points out over the input what Claude could misread. It works on this device and sends nothing; only “✨ Rewrite it clearly” asks Claude.',
 };

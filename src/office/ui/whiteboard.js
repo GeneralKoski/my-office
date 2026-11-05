@@ -67,20 +67,17 @@ const BW = 1024, BH = 512;
 let boardCanvas;
 let boardTex2;
 const FB = '"Be Vietnam Pro", system-ui, sans-serif';
-// In streamer mode the board shows grey bars where the words would be.
 function boardText(g, text, x, y, max) {
   const t = fitText(g, text, max);
-  if (!state.streamer) { g.fillText(t, x, y); return g.measureText(t).width; }
-  const w = Math.min(max, g.measureText(t).width), h = parseInt(g.font.match(/(\d+)px/)?.[1] || '20', 10) * 0.55, c = g.fillStyle;
-  g.fillStyle = 'rgba(120,128,142,.35)'; g.beginPath(); g.roundRect(x, y - h, w, h, h / 2); g.fill(); g.fillStyle = c;
-  return w;
+  g.fillText(t, x, y);
+  return g.measureText(t).width;
 }
 function fitText(g, text, max) { if (g.measureText(text).width <= max) return text; let lo = 0, hi = text.length; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (g.measureText(text.slice(0, m) + '…').width <= max) lo = m; else hi = m - 1; } return text.slice(0, lo).trimEnd() + '…'; }
 let boardSig = '';
 function drawBoard(t) {
   // redraw only when what the board says has changed (or a row is flashing)
   const pulsing = state.boardPulse.until > t;
-  const sig = JSON.stringify([state.streamer, state.todos, agentTasks().map((x) => [x.s.id, x.state, dn(x.s), x.s.lastPrompt, x.s.desk, (x.s.todos || []).map((k) => k.status).join('')])]);
+  const sig = JSON.stringify([state.todos, agentTasks().map((x) => [x.s.id, x.state, dn(x.s), x.s.lastPrompt, x.s.desk, (x.s.todos || []).map((k) => k.status).join('')])]);
   if (sig === boardSig && !pulsing) return;
   boardSig = pulsing ? '' : sig;
   const g = boardCanvas.getContext('2d');
@@ -110,7 +107,7 @@ function drawBoard(t) {
     }
     g.font = `500 26px ${FB}`; g.fillStyle = x.state === 'done' ? '#8A93A3' : '#22304A';
     const w = boardText(g, s.lastPrompt, 88, y + 48, right - 88);
-    if (x.state === 'done' && !state.streamer) { g.fillStyle = '#8A93A3'; g.fillRect(88, y + 39, w, 2.5); }
+    if (x.state === 'done') { g.fillStyle = '#8A93A3'; g.fillRect(88, y + 39, w, 2.5); }
   });
   if (!rows.length) { g.fillStyle = '#8A93A3'; g.font = `500 24px ${FB}`; g.fillText(tr('board.emptyLine1'), 40, 170); g.fillText(tr('board.emptyLine2'), 40, 204); }
   if (tasks.length > 5) { g.fillStyle = '#6B7486'; g.font = `600 20px ${FB}`; g.fillText(tr('board.more', { n: tasks.length - 5 }), 88, 132 + 5 * 72 - 4); }
@@ -139,7 +136,7 @@ function stickyTex(m, text, done, color) {
   for (const w of words) { const t2 = cur ? cur + ' ' + w : w; if (g.measureText(t2).width > 164 && cur) { lines.push(cur); cur = w; } else cur = t2; }
   if (cur) lines.push(cur);
   const shown = lines.slice(0, 5); if (lines.length > 5) shown[4] = fitText(g, shown[4] + '…', 164);
-  shown.forEach((l, i) => { const w = boardText(g, l, 14, 52 + i * 28, 168); if (done && !state.streamer) g.fillRect(14, 44 + i * 28, w, 2.5); });
+  shown.forEach((l, i) => { const w = boardText(g, l, 14, 52 + i * 28, 168); if (done) g.fillRect(14, 44 + i * 28, w, 2.5); });
   if (done) { g.strokeStyle = '#2E9E62'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(132, 160); g.lineTo(148, 176); g.lineTo(178, 140); g.stroke(); }
   const tex = m.userData.tex || (m.userData.tex = new THREE.CanvasTexture(c));
   tex.colorSpace = THREE.SRGBColorSpace; tex.needsUpdate = true;

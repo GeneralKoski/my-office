@@ -44,7 +44,6 @@ function timeLabel(ts) {
     : now - d < 7 * 864e5 ? `${d.toLocaleDateString(locale(), { weekday: 'long' })} ${date}` : date;
   return `${fmtTime(ts)} ${day}`;
 }
-const mask = (text) => (state.streamer ? String(text || '').replace(/“[^”]*”/g, '“…”') : String(text || ''));
 const meP = () => ({ key: 'me', name: tr('chat.boss') });
 const faceOf = (key, name) => (key === 'me' ? meP() : { ...(who(key) || {}), key, name: who(key)?.name || name || '?' });
 const nameOf = (key) => (key === 'me' ? tr('chat.you') : who(key)?.name || '');
@@ -123,7 +122,7 @@ function remindCard(m) {
   return card;
 }
 function quote(r) {
-  const q = el('span', 'zc-quote'); q.append(el('b', null, r.name), el('span', null, mask(r.text)));
+  const q = el('span', 'zc-quote'); q.append(el('b', null, r.name), el('span', null, String(r.text || '')));
   q.addEventListener('click', (ev) => { ev.stopPropagation(); flash(r.id); });
   return q;
 }
@@ -144,7 +143,7 @@ function content(m) {
   const names = [tr('chat.boss'), tr('chat.everyone'), 'All', ...people().map((id) => dn(sessions.get(id)))].filter(Boolean).sort((a, b) => b.length - a.length);
   const re = new RegExp(`(@(?:${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})|@[^\\s,.!?:]+)`, 'u');
   // a long one (a whole prompt, Claude's answer) folded the way the app does, "Xem thêm" to read it all
-  const full = mask(m.text), long = !opened.has(m.id) && (full.length > 700 || full.split('\n').length > 14);
+  const full = String(m.text || ''), long = !opened.has(m.id) && (full.length > 700 || full.split('\n').length > 14);
   const shown = long ? `${full.split('\n').slice(0, 10).join('\n').slice(0, 520).trimEnd()}…` : full;
   if (m.tag === 'claude') { t.classList.add('zc-md'); t.append(md(shown)); }   // (Claude's answer: its Markdown, laid out)
   else for (const part of shown.split(re)) { if (part?.startsWith('@')) t.append(el('span', 'zc-at', part)); else if (part) t.append(part); }
@@ -330,7 +329,7 @@ function drawHead() { headSub.textContent = tr('chat.members', { n: people().len
 function drawPin() {
   const m = chat.pinned && byId(chat.pinned);
   pinEl.hidden = !m || m.recalled;
-  if (m && !m.recalled) pinEl.querySelector('.zc-pin-t').textContent = m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : `${m.name}: ${mask(m.text)}`;
+  if (m && !m.recalled) pinEl.querySelector('.zc-pin-t').textContent = m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : `${m.name}: ${String(m.text || '')}`;
 }
 function drawTyping() {
   const t = chat.typing;
@@ -353,10 +352,10 @@ function groupAvatar(size = 40) {
 // a small card by the button for a new message while the window is shut (like a conversation in the app's list)
 let peekTimer = 0;
 function peek(m) {
-  if (chat.open || m.kind === 'sys' || m.from === 'me' || photoOn()) return;
+  if (chat.open || m.kind === 'sys' || m.from === 'me' || photoOn() || document.body.classList.contains('is-lite')) return;
   let p = $('zc-peek'); if (!p) { p = el('button', 'zc-peek'); p.id = 'zc-peek'; p.type = 'button'; p.addEventListener('click', () => toggle(true)); document.body.append(p); }
   if (m.kind === 'work') return;   // (a card at work: its answer is the news)
-  const txt = m.kind === 'loop' ? loopPeek(m) : m.kind === 'ci' ? ciPeek(m) : m.kind === 'deny' ? denyPeek(m) : m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
+  const txt = m.kind === 'loop' ? loopPeek(m) : m.kind === 'ci' ? ciPeek(m) : m.kind === 'deny' ? denyPeek(m) : m.kind === 'text' ? String(m.text || '') : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
   const box = el('span', 'zc-peek-t'); box.append(el('b', null, tr('chat.group')), el('span', null, `${m.name}: ${txt}`));
   p.replaceChildren(groupAvatar(44), box);
   p.hidden = false; p.classList.remove('is-out'); clearTimeout(peekTimer);
@@ -383,7 +382,7 @@ function setReply(m) {
   if (s?.sid) setTarget({ id: s.id, sid: s.sid, name: dn(s), folder: folderOf(s) });
   replyEl.hidden = !m && !steerTo; coachLater();
   if (m) {
-    const t = m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
+    const t = m.kind === 'text' ? String(m.text || '') : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
     replyEl.querySelector('b').textContent = tr('chat.replyTo', { name: m.from === 'me' ? tr('chat.you') : m.name });
     replyEl.querySelector('.zc-reply-t').textContent = t;
     input.focus();

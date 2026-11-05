@@ -14,7 +14,7 @@
 //   a facility's fire plan is practised at least once a year (many companies do it every quarter); escape by the stairs
 //   only, never the lift (Cục Cảnh sát PCCC và CNCH's guidance); the assembly, the roll call, and the hand
 //   extinguisher's use (lắc bình, giật chốt, hướng loa phun vào gốc lửa, bóp van).
-// Settings → More turns it off. ?drill: one now; ?debug: __office.drill.
+// ?drill: one now; ?debug: __office.drill.
 import * as THREE from 'three';
 import { state } from '../core/state.js';
 import { PRO, officeNow, pad2, rand, reduceMotion, replay } from '../core/env.js';
@@ -37,14 +37,12 @@ import { dayKey, isWorkday, quarterStart } from '../../shared/workdays.js';
 import { t as tr } from '../../i18n/index.js';
 
 const Q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
-const FORCE = Q.has('drill'), AT = 900, KEY = 'office-drill', DONE_KEY = 'office-drill-day';
+const FORCE = Q.has('drill'), AT = 900, DONE_KEY = 'office-drill-day';
 const FONT = '"Be Vietnam Pro", system-ui, sans-serif';
 let D = null, last = null, checkAt = 0, noticeDay = '', strobes = null, kit = null, forced = false, bornAt = 0;
 const minutes = (d = officeNow()) => d.getHours() * 60 + d.getMinutes();
 const quarterOf = (d) => tr('life.drill.quarters', null, 'list')[Math.floor(d.getMonth() / 3)];   // (I–IV in Vietnamese, 1–4 in English)
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { /* storage blocked */ } return null; };
-/** whether the drill is on (Settings → More) */
-export const drillOn = () => store(KEY) !== 'off';
 /** today is the quarter's first working day (the drill's day) */
 export const drillDay = (d = officeNow()) => isWorkday(d) && dayKey(quarterStart(d)) === dayKey(d);
 function say(w, key, vars, ms = 3500) { const text = tr(`life.drill.${key}`, vars); w.say('idle', text); setTimeout(() => { if (w.lastSay?.text === text) w.hush(); }, ms); return text; }
@@ -317,7 +315,7 @@ export function updateDrill() {
   if (replay.on) return;
   const d = officeNow(), m = minutes(d), today = dayKey(d);
   if (FORCE && !forced && now - bornAt > 6000) { if (liftIdle() || now - bornAt > 20000) { forced = true; begin(); } return; }   // (?drill: once a page, the lift free first)
-  if (!drillOn() || !drillDay(d)) return;
+  if (!drillDay(d)) return;
   // the morning: HR's notice, pinned in the group chat
   if (noticeDay !== today && m >= 510 && m < 690) { noticeDay = today; chatLife('drillNotice', { q: quarterOf(d), every: 12 * 3600e3 }); }
   // 15:00 (up to half past, if the page was closed at three), once

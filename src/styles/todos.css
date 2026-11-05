@@ -20,7 +20,6 @@
 .todo-list li:hover .todo-del, .todo-del:focus-visible { opacity: 1; }
 .todo-del:hover { background: var(--red-soft); color: var(--red); }
 @media (hover: none) { .todo-del { opacity: .7; } }
-.is-stream .pl-rows, .is-stream .pl-now, .is-stream .todo-list, .is-stream .pl-todos { filter: blur(5px); user-select: none; }
 @media (max-width: 720px) {
   .plc, .plc[data-place="board"] { position: absolute; left: 8px; right: 8px; top: auto; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: calc(100% - 210px); transform: none !important; background: #131922; }
 }

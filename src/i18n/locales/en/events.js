@@ -1,6 +1,5 @@
 // How events read on screen (ui/event-text.js): the lines in the feed and the session drawer, the speech bubbles over the
-// characters, and the safe words streamer mode shows in place of paths, commands and prompts. Bubbles sit over people's
-// heads, so keep them short.
+// characters. Bubbles sit over people's heads, so keep them short.
 export default {
   // a session's state in the list and the drawer
   status: { work: 'working', wait: 'needs approval', rest: 'resting' },
@@ -8,11 +7,6 @@ export default {
   station: {
     dining: 'dining room', board: 'whiteboard', library: 'library', desk: 'desk', server: 'server room', globe: 'window',
     coffee: 'coffee corner', meeting: 'meeting room', director: "director's office", wc: 'restroom', tests: 'test board', post: 'post box',
-  },
-  // streamer mode: what a label becomes when it could show a path, command, prompt or URL
-  generic: {
-    prompt: 'a new task', read: 'a file', grep: 'something', glob: 'a folder', skill: 'a skill', edit: 'a file', write: 'a file',
-    bash: 'run a command', web: 'something', fetch: 'a web page', mcp: 'a tool', wait: 'an action', fail: 'an action', deploy: 'a new version', test: 'the tests',
   },
   // one line per event, for the feed and the drawer (the first letter is capitalised where it starts a line)
   verb: {
@@ -39,7 +33,6 @@ export default {
     idle: 'waiting for your message',
     deploy: 'deploy {label} 🚀',
     commit: 'commit: “{label}” 🖨️',
-    commitHidden: 'commit 🖨️',
     push: 'push code to {target} 🚀',
     release: 'release {tag} 🏷️',
     ciRed: 'CI is red: {label}',

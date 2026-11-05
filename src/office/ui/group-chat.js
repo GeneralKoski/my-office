@@ -56,7 +56,7 @@ let engine = null;
 function applyAdd(m) {
   if (chat.msgs.some((x) => x.id === m.id)) return;
   chat.msgs.push(m); if (chat.msgs.length > 330) chat.msgs.splice(0, chat.msgs.length - 300);
-  if (!chat.open && m.kind !== 'sys' && m.from !== 'me') { chat.unread++; sfx?.play('chat'); }
+  if (!chat.open && m.kind !== 'sys' && m.from !== 'me' && !document.body.classList.contains('is-lite')) { chat.unread++; sfx?.play('chat'); }
   emit('add', m);
 }
 function applyUpdate(m) { const i = chat.msgs.findIndex((x) => x.id === m.id); if (i >= 0) { chat.msgs[i] = m; emit('update', m); } }

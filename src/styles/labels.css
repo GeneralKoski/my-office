@@ -22,7 +22,6 @@
 .bubble--muted { opacity: 0; pointer-events: none; }
 .tag--muted { opacity: 0; pointer-events: none; }
 .tag-acct { margin-left: 2px; padding: 2px 6px; border-radius: 999px; background: rgba(242, 179, 61, .2); color: #F6D08A; font-size: 10px; font-weight: 700; }
-.is-stream .tag-acct { filter: blur(3px); }
 /* a subagent's model on its name tag (people/workers.js setModel), in its family's colour */
 .tag-model { margin-left: 4px; padding: 2px 6px; border-radius: 999px; background: rgba(140, 160, 190, .22); color: #D5DEEA; font-size: 10px; font-weight: 700; }
 .tag-model[data-family="opus"] { background: rgba(217, 119, 87, .25); color: #F4B9A2; }

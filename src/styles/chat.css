@@ -92,7 +92,6 @@ details[open] > summary .st-chev { transform: rotate(90deg); }
 .chat-jump { all: unset; position: absolute; right: 22px; bottom: 18px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px 8px 10px; border-radius: 999px; background: var(--card-3); border: 1px solid var(--line-2); box-shadow: 0 8px 22px rgba(0, 0, 0, .45); font-size: .74rem; font-weight: 700; color: var(--ink); cursor: pointer; }
 .chat-jump:hover { background: #2F3A4D; }
 .chat-jump svg { width: 14px; height: 14px; transform: rotate(90deg); }
-.is-stream .msg-summary, .is-stream .steps ul { filter: blur(5px); user-select: none; }
 .chat-empty { color: var(--muted); font-size: .83rem; }
 .sub-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .sub-head b { font-size: .86rem; }

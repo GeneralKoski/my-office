@@ -45,7 +45,7 @@ export function onEvent(e) {
   if (e.type === 'commit') onCommit(e); if (e.type === 'push') onPush(e);   // a letter in the post box; the postman (post.js)
   if (e.type === 'push' || e.type === 'deploy') applaud(e.sess);
   if (e.type === 'release') photoRelease(e.label);   // (four of them to the photo booth across the street: people/photobooth.js)
-  if (e.type === 'push') { launchRocket(); sfx.play('deploy'); toast(tr('incident.pushed', { name: dn(sessions.get(e.sess)) || e.repo, branch: state.streamer ? 'git' : e.branch || 'git' })); }
+  if (e.type === 'push') { launchRocket(); sfx.play('deploy'); toast(tr('incident.pushed', { name: dn(sessions.get(e.sess)) || e.repo, branch: e.branch || 'git' })); }
   if (e.type === 'cired') { pickleCi(e); sfx.play('siren'); toast(tr('incident.ciRed', { label: e.label || tr('incident.ciRedDefault'), repo: e.repo }), 6500); }
   if (e.type === 'cigreen') { toast(tr('incident.ciGreen', { label: e.label || '', repo: e.repo })); treat(); }   // (green again: ice cream from the Mixue for everyone)
   { const s0 = sessions.get(e.sess);
@@ -80,7 +80,7 @@ export function onEvent(e) {
   if (director && e.type === 'prompt') director.deliver(e.sess, e.label || '');
   if (director && e.type === 'stop' && director.station === 'home' && STATIONS.director.some((x) => !x.by)) {   // pro plan: report to the director first, then the pantry
     const rest = a, done = s.lastPrompt || e.label || '';
-    a = { station: 'director', anim: 'think', type: 'stop', text: !done ? tr('incident.reportNoTask') : state.streamer ? tr('incident.reportHidden') : tr('incident.report', { task: short(done, 40) }), e, dwell: 2.4,
+    a = { station: 'director', anim: 'think', type: 'stop', text: !done ? tr('incident.reportNoTask') : tr('incident.report', { task: short(done, 40) }), e, dwell: 2.4,
       after: () => { if (!director.ack(w)) w.say('stop', tr('incident.reportLeft')); w.push(rest); } };
   }
   if (e.type === 'deploy') launchRocket();

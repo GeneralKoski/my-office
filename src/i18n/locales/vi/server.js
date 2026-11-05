@@ -127,8 +127,6 @@ export default {
   },
   deny: { over: 'Lệnh này không còn chờ nữa: Claude đã làm tiếp.' },
   cache: {
-    nudgeTitle: '☕ {name} còn {n} phút là nguội',
-    nudgeBody: 'Phiên đang chờ bạn trả lời. Trả lời ngay thì nhắn tiếp rẻ; để nguội thì lần nhắn sau sẽ đọc lại ~{tokens}k token.',
   },
   steer: { note: '[Người dùng chen lời qua My Office (từ điện thoại) trong lúc bạn đang làm]\n{text}' },
   push: {

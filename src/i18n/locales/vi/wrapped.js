@@ -15,7 +15,6 @@ export default {
   cmds: 'lệnh đã chạy',
   cost: 'giá API ≈',
   topProject: '🏆 Dự án chăm nhất: {name} · {h} giờ',
-  aProject: 'một dự án',
   busiestDay: '📅 Ngày bận nhất: {day} {date}',
   longest: '⏱️ Lần chạy liền dài nhất: {time}',
   commits: '🖨️ {c} commit',

@@ -20,7 +20,7 @@ export function openMac() { if (state.selectedId) closeSession(); drM.hidden = f
 export function closeMac() { drM.hidden = true; clearInterval(state.macTimer); state.macTimer = setInterval(pollMac, 30000); }
 // the readings by the clock: not while the tab is hidden (each one has the server list every process; a tab hidden for
 // the evening would keep it at it all night); it reads again as soon as the tab shows
-export const pollMac = () => { if (document.visibilityState === 'visible') loadMac(); };
+export const pollMac = () => { if (document.visibilityState === 'visible' && !document.body.classList.contains('is-lite')) loadMac(); };
 // the drawer is rebuilt on every reading: not while a button in it is being pressed, or the click would land on a
 // button that no longer exists (the next reading draws it)
 let pressing = false;
@@ -323,6 +323,28 @@ function renderAdd() {
   if (adding.note) card.append(el('small', 'pa-note', adding.note));
   box.replaceChildren(card);
 }
+// 2D top bar: the 5 hours and the week as two rings that fill up slowly, green to amber to red with the percentage
+const ringColor = (pct) => `hsl(${Math.round(pct < 50 ? 145 : 145 - ((Math.min(pct, 100) - 50) * 140) / 50)} 70% 52%)`;
+let rings = null;
+function planRings(sess, week, fallback) {
+  const box = $('plan-lite');
+  if (!rings) {
+    rings = {};
+    for (const k of ['session', 'weekly']) {
+      const it = el('span', 'pl-item'), ring = el('i', 'pl-ring'), lab = el('span', 'pl-lab'), val = el('b', 'pl-val');
+      it.append(ring, lab, val); box.append(it); rings[k] = { it, ring, lab, val };
+    }
+    rings.none = el('span', 'pl-lab'); box.append(rings.none);
+    void box.offsetWidth;   // (drawn once empty, so the first fill is seen)
+  }
+  for (const [k, w, label] of [['session', sess, tr('mac.plan.fiveHour')], ['weekly', week, tr('mac.plan.week')]]) {
+    const r = rings[k]; r.it.hidden = !w; if (!w) continue;
+    const pct = Math.round(w.pct);
+    r.ring.style.setProperty('--p', Math.min(100, pct)); r.ring.style.setProperty('--c', ringColor(pct));
+    r.lab.textContent = label; r.val.textContent = `${pct}%`;
+  }
+  rings.none.textContent = sess || week ? '' : fallback;
+}
 export function renderLimits() {
   const ws = liveWindows(), box = $('plan-card'), others = state.limits?.others || [], none = !ws.length && !others.length;
   box.classList.toggle('is-empty', none);
@@ -332,6 +354,8 @@ export function renderLimits() {
     // other accounts: their tightest limit after the main one ("5 h 29% · org2 12%")
     const more = others.map((o) => { const t = tightest(liveOf(o)); return t ? ` · ${o.label || o.name} ${Math.round(t.pct)}%` : ''; }).join('');
     $('plan-mini').textContent = (top ? `${top.key === 'session' ? tr('mac.plan.fiveHour') : top.label} ${Math.round(top.pct)}%` : state.limitsNote ? tr('mac.plan.unread') : tr('mac.plan.reading')) + more;
+    const sess = ws.find((w) => w.key === 'session'), week = ws.find((w) => w.key === 'weekly');
+    planRings(sess, week, $('plan-mini').textContent);
     $('plan-bar').style.width = `${top ? Math.min(100, Math.max(2, top.pct)) : 0}%`;
     pill.dataset.level = top ? limitLevel(top.pct) : 'normal';
     pill.title = top ? tr('mac.plan.pillTitle', { text: `${ws.map((w) => `${w.label} ${Math.round(w.pct)}%`).join(' · ')}${top.resetsAt ? ` · ${tr('mac.plan.labelResets', { label: top.label, when: resetText(top.resetsAt) })}` : ''}` }) : state.limitsNote || tr('mac.plan.title');
