@@ -57,5 +57,6 @@ export function startOffice() {
   if (started) return;
   started = true;
   for (const m of MODULES) m.setup();
+  demoDemo.start(); uiTopbar.renderBell();
   uiSettings.syncToggles(); uiLite.setLite(true);
 }

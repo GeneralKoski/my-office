@@ -6,7 +6,7 @@ export default async function Stage() {
   return (
     <main className="stage-wrap" id="stage-wrap">
       <div id="stage"></div>
-      <div className="lite" id="lite" hidden aria-label={t('ui.stage.lite')}></div>
+      <div className="lite" id="lite" aria-label={t('ui.stage.lite')}></div>
       <div className="perm-stack" id="perm-stack" hidden aria-live="assertive"></div>
       <div className="empty" id="empty" hidden><b>{t('ui.stage.emptyTitle')}</b><span className="muted">{t('ui.stage.emptyText')}</span></div>
     </main>

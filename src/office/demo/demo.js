@@ -306,6 +306,8 @@ export function dropSessionNow(id) {
   if (state.selectedId === id) closeSession();
 }
 
+// the page's start: the demo's fictional sessions, or the live stream
+export function start() { if (DEMO) startDemo(); else connect(); }
 export function setup() {
   /* ---------- demo mode (?demo): fictional projects and a fictional Mac, so the office can be shown or screenshotted
      without any real sessions, paths or commands. Nothing is sent to the server and no action touches the machine. ---------- */
