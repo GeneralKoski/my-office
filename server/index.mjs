@@ -331,7 +331,7 @@ function freeDesk() {
   return -1;
 }
 const pubSub = (x) => ({ id: x.id, type: x.type, desc: x.desc || '', last: x.last || null, startedAt: x.startedAt, endedAt: x.endedAt || null, steps: x.steps || 0, model: x.model || '' });
-const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', dir: tilde(s.cwd), link: s.link, desk: s.desk, status: s.status, lastPrompt: s.lastPrompt && oneLine(unwrapPaste(s.lastPrompt)),
+const pub = (s) => ({ id: s.id, sid: s.sid || '', pid: s.pid, name: s.name, title: s.title || '', dir: tilde(s.cwd), link: s.link, desk: s.desk, status: s.status, lastPrompt: s.lastPrompt && oneLine(unwrapPaste(s.lastPrompt)),
   taskStart: s.taskStart, counts: s.counts, subs: Object.values(s.subs).map(pubSub), doneSubs: (s.doneSubs || []).map(pubSub), last: s.last, acct: acctOf(s),
   entry: s.entry || '', moved: s.parked ? { to: acctShown(s.parked.to), at: s.parked.at } : null,
   lastAt: s.lastEventAt || s.createdAt, doneAt: s.doneAt || 0, todos: s.todos || [], lastReply: s.lastReply || '', origin: s.origin || '',
@@ -1839,8 +1839,35 @@ async function vaultOut(q, mac) {
     return { ok: true, rec: { ...rec, title: redact(rec.title), cwd: tilde(rec.cwd), msgs: rec.msgs.map((m) => ({ ...m, t: redact(m.t) })) } };
   }
   if (mac && q.has('fresh')) await vault.scan().catch(() => {});   // (read again now: the Mac's own button, and the tests)
-  const items = (await vault.search(String(q.get('q') || '').slice(0, 200))).map(vaultItem);
+  const items = (await vault.search(String(q.get('q') || '').slice(0, 200), { limit: Math.min(Math.max(Number(q.get('limit')) || 60, 1), 3000) })).map(vaultItem);
   return { ok: true, stats: vault.stats(), items };
+}
+// A conversation renamed from the archive: what Claude Code's own /rename writes (a `custom-title` line at the end of the
+// transcript), so the editor and the terminal show it too; a conversation whose transcript is gone is renamed here only.
+async function renameChat(b) {
+  const sid = String(b?.sid || ''), title = String(b?.title || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (!/^[\w-]{8,80}$/.test(sid)) return [400, { ok: false }];
+  if (!title) return [400, { ok: false, code: 'empty' }];
+  let file = null;
+  for (const d of [CLAUDE_DIR, ...otherDirs]) {
+    const root = path.join(d, 'projects'); let projects = []; try { projects = await fsp.readdir(root); } catch { continue; }
+    for (const p of projects) { const f = path.join(root, p, `${sid}.jsonl`); try { await fsp.access(f); file = f; break; } catch { /* not here */ } }
+    if (file) break;
+  }
+  if (file) {
+    const fh = await fsp.open(file, 'a+');
+    try {
+      const { size } = await fh.stat(); let lead = '';
+      if (size) { const last = Buffer.alloc(1); await fh.read(last, 0, 1, size - 1); if (last[0] !== 10) lead = '\n'; }
+      await fh.appendFile(`${lead}${JSON.stringify({ type: 'custom-title', customTitle: title, sessionId: sid })}\n`);
+    } finally { await fh.close(); }
+  }
+  const s = [...sessions.values()].find((x) => x.sid === sid);
+  if (s) { s.customTitle = title; s.title = clip(redact(oneLine(title)), 80); broadcast({ k: 'sess', s: pub(s) }); }
+  const kept = vault ? await vault.rename(sid, title) : false;
+  if (!file && !kept) return [404, { ok: false }];
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} rename ${sid} ${file ? 'transcript' : 'vault only'}\n`).catch(() => {});
+  return [200, { ok: true, title, how: file ? 'file' : 'vault' }];
 }
 /* ---------- "Phiếu điểm prompt" (server/prompt-report.mjs): the last 7 days of what you wrote, against the 7 before,
    with the chat's prompt-helper rules; the vault drawer's second tab, and a line in the chat on Monday morning ---------- */
@@ -2965,6 +2992,11 @@ const server = http.createServer((req, res) => {
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
       json(res, 200, pinOp(b || {}, [...sessions.values()].find((x) => x.id === String(b?.id || ''))));
     });
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/rename') {   // the archive: { sid, title }; on this computer only
+    if (!authorized(req, url) || !sameOriginOf(req) || !isLoopback(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    readJson(req, 20_000).then((b) => renameChat(b)).then(([code, out]) => json(res, code, out)).catch(() => json(res, 500, { ok: false }));
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/undo') {   // "Hoàn tác lượt cuối": { id (the session), op?: 'tell', files? }

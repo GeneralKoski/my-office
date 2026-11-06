@@ -131,6 +131,15 @@ export function createVault({ dir, claudeDirs, now = Date.now, log = () => {} })
     }
     return out.sort((a, b) => a.at - b.at);
   }
+  /** A new title for a kept conversation (the transcript itself is renamed by the caller): its index line and its words. */
+  async function rename(sid, title) {
+    const e = index.get(sid); if (!e) return false;
+    e.title = title;
+    const file = path.join(CD, `${sid}.json.gz`);
+    try { const rec = JSON.parse(await gunzip(await fsp.readFile(file))); rec.title = title; await fsp.writeFile(`${file}.tmp`, await gzip(JSON.stringify(rec))); await fsp.rename(`${file}.tmp`, file); } catch { /* the index has it */ }
+    await save();
+    return true;
+  }
   const stats = () => { let gone = 0, bytes = 0; for (const e of index.values()) { if (e.gone) gone++; bytes += e.bytes || 0; } return { n: index.size, gone, bytes, at: scannedAt }; };
-  return { scan, search, get, prompts, stats };
+  return { scan, search, get, prompts, stats, rename };
 }
