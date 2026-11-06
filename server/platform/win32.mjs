@@ -1,5 +1,5 @@
 // Windows readings: one PowerShell run per reading (CIM for processes and the page file, Get-NetTCPConnection for
-// sockets: its states are numbers, so a German or Vietnamese Windows reads the same), shared for two seconds because
+// sockets: its states are numbers, so a German or Italian Windows reads the same), shared for two seconds because
 // starting PowerShell takes a moment. Windows has no user ids or process groups: a process's "uid" is its session
 // (services run in session 0) and each process is its own group. Claude Code keeps its sign-in in a file here.
 import fsp from 'node:fs/promises';

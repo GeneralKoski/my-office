@@ -1,4 +1,4 @@
-// "Ngắt vòng lặp kẹt": a session going round in circles, caught before it burns more. Three signs, read from the hooks
+// Stuck-loop breaker: a session going round in circles, caught before it burns more. Three signs, read from the hooks
 // and the status line (code.claude.com/docs/en/hooks, /statusline):
 //   repeat   the same tool call failing the same way N times in a row (PostToolUseFailure's `error`);
 //   compact  automatic compaction after compaction (PreCompact, trigger "auto"), 3 in half an hour;

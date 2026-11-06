@@ -1,6 +1,6 @@
 // Claude Code's version on this computer, watched: the newest of the editors' Claude Code extensions
 // (<editor folder>/extensions/anthropic.claude-code-<version>-…), looked at every five minutes. A newer one than last
-// time is news for the office (Thế Giới Di Động: someone goes to "lên đời", people/outings.js). The first one ever seen
+// time is news for the office (a character goes to the phone shop for an upgrade, people/outings.js). The first one ever seen
 // is not news. Kept in data/claude-version.json, so a restart doesn't tell it again.
 import fs from 'node:fs';
 import os from 'node:os';

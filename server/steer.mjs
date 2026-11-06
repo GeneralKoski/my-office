@@ -1,5 +1,5 @@
-// "Chen lời giữa chừng": a note from the chat or a phone into a Claude Code session while it works ("sửa luôn test",
-// "sai file rồi, dừng"), instead of waiting for it to finish. It goes through the session's own inbox socket, the one
+// Steering a working session: a note from the chat or a phone into a Claude Code session while it works ("fix the test",
+// "wrong file, stop"), instead of waiting for it to finish. It goes through the session's own inbox socket, the one
 // Claude Code documents for "a script or hook to post into a session" (code.claude.com/docs/en/cross-session-messaging):
 // a working session reads it between two tool calls, a resting one starts a turn with it. Its path is in the session's
 // file (messagingSocketPath) or, for the runs the office starts, told by their SessionStart hook ($CLAUDE_CODE_MESSAGING_

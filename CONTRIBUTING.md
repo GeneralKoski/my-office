@@ -15,7 +15,7 @@ npm run dev          # http://localhost:4310 with Turbopack and hot reload
 ```
 
 Open <http://localhost:4310/?demo> to see the office with fictional projects: you don't need Claude Code running.
-`?layout=pro` or `?layout=cozy` picks the floor plan, `?at=12:10` pretends it is lunchtime, `?season=noel|tet|halloween`
+`?layout=pro` or `?layout=cozy` picks the floor plan, `?at=12:10` pretends it is lunchtime, `?season=noel|halloween`
 shows a season's decorations, `?debug` exposes `window.__office` for poking around in the console.
 
 To see your real sessions, connect Claude Code once: `node bin/cli.mjs install` (adds the hooks to
@@ -53,10 +53,10 @@ Quick pointers:
    the console). Static meshes merge automatically; moving ones need `userData.noMerge`.
 2. Match the code around you: short functions, a comment that says *why* above anything surprising, the same naming.
 3. Never write UI text into the code: add a key to `src/i18n/locales/en/<area>.js` and use `tr('area.key')` (engine,
-   server) or `t('area.key')` (components). English is the reference; add the Vietnamese in `locales/vi/` too if you
+   server) or `t('area.key')` (components). English is the reference; add the Italian in `locales/it/` too if you
    can, otherwise it falls back to English. See [Languages](#languages).
-4. Never send anything off the machine without the user turning it on (the weather and translation calls are opt-in or
-   can be switched off with `OFFICE_TRANSLATE=0`). Secrets shown in the UI go through `redact()`.
+4. Never send anything off the machine without the user turning it on (network calls are opt-in or can be
+   switched off, see the README). Secrets shown in the UI go through `redact()`.
 5. Add or update a test when you change behaviour: unit tests in `tests/unit/`, browser tests in `tests/e2e/`.
 6. Run `npm run lint && npm run typecheck && npm test` before pushing.
 

@@ -1,4 +1,4 @@
-// Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the row in Settings → More (on or off, after how many failures,
+// Stuck sessions (server/loops.mjs): the row in Settings → More (on or off, after how many failures,
 // after how many minutes of spending with nothing edited). The line in the list is ui/lite.js.
 import { $, STATIC } from '../core/env.js';
 import { TOKEN } from '../net/live.js';

@@ -1,5 +1,5 @@
-// "Ghi nhớ cho Claude" (server: /api/pins, /hook/start): what you want a conversation to keep in mind, said to Claude
-// again each time Claude Code compacts it. The session drawer's "Ghi nhớ" tab: the notes, one to add, ✕ to unpin. The
+// Pins for Claude (server: /api/pins, /hook/start): what you want a conversation to keep in mind, said to Claude
+// again each time Claude Code compacts it. The session drawer's pins tab: the notes, one to add, ✕ to unpin. The
 // demo keeps them in the page.
 import { $, el, hhmm } from '../core/env.js';
 import { state } from '../core/state.js';

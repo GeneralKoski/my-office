@@ -1,4 +1,4 @@
-// The prompt cache's clock for a session ("Đồng hồ bộ nhớ đệm"): warm or gone cold, how long it has left, and how much
+// The prompt cache's clock for a session: warm or gone cold, how long it has left, and how much
 // the next message reads back once it is cold. Claude Code reports it in the status line's `prompt_cache` (v2.1.251+:
 // warm, ttl, expires_at, recache_tokens_if_cold; code.claude.com/docs/en/statusline), and on a resumed or forked session
 // in SessionStart (prompt_cache_likely_expired, context_tokens, seconds_since_last_response; /hooks). Without either

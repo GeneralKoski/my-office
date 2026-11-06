@@ -1,4 +1,4 @@
-// "Hoàn tác lượt cuối": the files Claude changed with its file tools (Edit, Write, MultiEdit, NotebookEdit) in a
+// Undo of the last turn: the files Claude changed with its file tools (Edit, Write, MultiEdit, NotebookEdit) in a
 // conversation's last turn, put back as they were before it. The office keeps its own copies: the synchronous hook that
 // runs before every call (/hook/loop) asks before(), which copies a file the first time the turn touches it (or notes
 // that it didn't exist yet), before Claude Code writes it. Not what a shell command changed (git, sed, a build): that is

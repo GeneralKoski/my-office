@@ -1,4 +1,4 @@
-// Two sessions on one file, and a port another process holds ("chặn ghi đè và giành cổng"). What each session edited
+// Two sessions on one file, and a port another process holds. What each session edited
 // (from its PostToolUse events), so that when another one is about to edit the same file within the window its Claude is
 // told first; and a word kept for a session until its next tool call (the synchronous hook carries it). Memory only.
 import path from 'node:path';

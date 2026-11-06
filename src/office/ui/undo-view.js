@@ -1,4 +1,4 @@
-// "Hoàn tác lượt cuối" (server/undo.mjs): in the session drawer, what undoing the last turn would do to each file, two
+// Undo of the last turn (server/undo.mjs): in the session drawer, what undoing the last turn would do to each file, two
 // clicks to do it, then what was done and "Tell Claude" (it doesn't know its files were put back otherwise).
 import { $, el, hhmm, short } from '../core/env.js';
 import { TOKEN } from '../net/live.js';

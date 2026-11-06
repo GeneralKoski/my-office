@@ -24,7 +24,7 @@ function decrypt(ua, auth, msg) {
 test('a push message is what the phone can read back (aes128gcm, keyed from its p256dh and auth)', () => {
   const ua = crypto.createECDH('prime256v1'); ua.generateKeys();
   const auth = crypto.randomBytes(16), keys = { p256dh: ua.getPublicKey().toString('base64url'), auth: auth.toString('base64url') };
-  const text = JSON.stringify({ title: 'Website-Ielts', body: 'Xong rồi sếp ơi ✅' });
+  const text = JSON.stringify({ title: 'Website-Ielts', body: 'Fatto capo ✅' });
   assert.equal(decrypt(ua, auth, encrypt(keys, text)), text);
 });
 

@@ -284,8 +284,8 @@ export function buildChat(items, who = 'Claude') {
     if (it.ts) lastTs = it.ts;
     if (it.role === 'tool') { (steps ||= []).push(it); return; }
     flush();
-    // the server writes the note; one about a subagent gets a clipboard ("trợ lý" is the Vietnamese wording)
-    if (it.role === 'note') { chat.append(el('div', 'msg-note', `${/trợ lý|subagent/i.test(it.text) ? '📋' : '✋'} ${it.text}${it.ts ? ' · ' + hhmm(it.ts) : ''}`)); return; }
+    // the server writes the note; one about a subagent gets a clipboard
+    if (it.role === 'note') { chat.append(el('div', 'msg-note', `${/subagent/i.test(it.text) ? '📋' : '✋'} ${it.text}${it.ts ? ' · ' + hhmm(it.ts) : ''}`)); return; }
     if (it.role === 'summary') {
       const d = foldable(el('details', 'msg-summary'), chatKey(it, 'sum')), sm = el('summary');
       const ic = el('span', 'sum-ico'); ic.append(icon('list'));

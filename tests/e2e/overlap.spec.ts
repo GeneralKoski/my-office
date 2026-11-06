@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { HOME_DIR } from '../../playwright.config';
 
-// "Chặn ghi đè và giành cổng" (server/overlap.mjs): two sessions on one file, and a command that can't have its port.
+// Overwrite and port guard (server/overlap.mjs): two sessions on one file, and a command that can't have its port.
 // The sessions are hook events; what their Claude is told comes back from the synchronous hook (/hook/loop), as Claude
 // Code would read it, and what you are told is in the group chat.
 const DIR = path.join(HOME_DIR, 'overlap-project'), FILE = path.join(DIR, 'src', 'app.ts');

@@ -46,11 +46,11 @@ test('the panel: logo, quota card on hover and focus, the Mac meters and a fix',
     class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [], perms: [], ai: null, limits: d }) }); }, 0); } close() { /* none */ } }
     (window as unknown as { EventSource: unknown }).EventSource = FakeES;
   }, { windows: [
-    { key: 'session', label: '5 giờ', pct: 9, resetsAt: soon },
-    { key: 'weekly', label: 'Tuần', pct: 30, resetsAt: soon + 2 * day, active: false },
-    { key: 'weekly_scoped:Fable', label: 'Fable (tuần)', pct: 85, resetsAt: soon + 3 * day },
+    { key: 'session', label: '5 h', pct: 9, resetsAt: soon },
+    { key: 'weekly', label: 'Week', pct: 30, resetsAt: soon + 2 * day, active: false },
+    { key: 'weekly_scoped:Fable', label: 'Fable (week)', pct: 85, resetsAt: soon + 3 * day },
   ], others: [
-    { name: 'phu', label: '', windows: [{ key: 'session', label: '5 giờ', pct: 40, resetsAt: soon }] },
+    { name: 'phu', label: '', windows: [{ key: 'session', label: '5 h', pct: 40, resetsAt: soon }] },
     { name: 'max20x', label: '', windows: [], note: 'Read again in 46 minutes.' },
   ] });
   const mac = { at: Date.now(), mem: { used: 12 * 1024 ** 3, total: 16 * 1024 ** 3, swapUsed: 0, swapTotal: 0, pressure: 'normal' }, cpu: { percent: 20, cores: 8, load: 1.2 }, disk: { used: 100 * 1024 ** 3, total: 500 * 1024 ** 3, free: 400 * 1024 ** 3 }, tight: false, diskTight: false, apps: [], devServers: [], claude: [{ pid: 4242, mem: 600 * 1024 ** 2 }],
@@ -64,7 +64,7 @@ test('the panel: logo, quota card on hover and focus, the Mac meters and a fix',
   const pill = page.locator('.pn-qp', { hasText: 'Claude' });
   await pill.hover();
   const pop = page.locator('.pn-pop');
-  for (const w of ['5 giờ', 'Tuần', 'Fable (tuần)']) await expect(pop).toContainText(w);
+  for (const w of ['5 h', 'Week', 'Fable (week)']) await expect(pop).toContainText(w);
   // every account, the one with nothing to show yet too (with why)
   for (const w of ['Main account', 'Account phu', '40%', 'Account max20x', 'Read again in 46 minutes.']) await expect(pop).toContainText(w);
   // reading the card (the mouse on it) while the list is drawn again (a session's news): it stays open. (Over the pill
@@ -80,7 +80,7 @@ test('the panel: logo, quota card on hover and focus, the Mac meters and a fix',
   await page.mouse.move(200, 600);
   await expect(pop).toBeHidden();
   await pill.focus();   // (keyboard)
-  await expect(pop).toContainText('Fable (tuần)');
+  await expect(pop).toContainText('Fable (week)');
   await page.keyboard.press('Escape');
   await expect(pop).toBeHidden();
   // the Mac: closed it is one line; open it has the meters and the idle-sessions fix, asked twice

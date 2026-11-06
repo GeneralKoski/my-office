@@ -1,4 +1,4 @@
-// "Model: người điều phối và subagent" (Settings → More): the model a session runs on (the coordinator: "model" in
+// Coordinator and subagent models (Settings → More): the model a session runs on (the coordinator: "model" in
 // ~/.claude/settings.json) and the one its subagents run on (env CLAUDE_CODE_SUBAGENT_MODEL: the ones Claude doesn't
 // pick a model for; with CLAUDE_CODE_SUBAGENT_MODEL_FORCE, every one), and a short note in ~/.claude/CLAUDE.md that asks
 // Claude to hand the independent parts of a big task to subagents. Claude Code reads all of it as a session starts: the

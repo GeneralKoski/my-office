@@ -35,15 +35,16 @@ test('every key the code asks for exists in English', () => {
 });
 
 test('slots, plurals, lists and the English fallback', () => {
-  const en = createT('en'), vi = createT('vi');
+  const en = createT('en'), it = createT('it');
   assert.equal(en('time.min', { n: 3 }), '3 min');
   assert.equal(en('time.day', { n: 1 }), '1 day');
   assert.equal(en('time.day', { n: 2 }), '2 days');
-  assert.equal(vi('time.day', { n: 2 }), '2 ngày');
+  assert.equal(it('time.day', { n: 1 }), '1 giorno');
+  assert.equal(it('time.day', { n: 2 }), '2 giorni');
   assert.equal(en('no.such.key'), 'no.such.key');
   assert.deepEqual(en('no.such.key', null, 'list'), []);
   assert.equal(en.num(1234.5, 1), '1,234.5');
-  assert.equal(vi.num(1234.5, 1), '1.234,5');
+  assert.equal(it.num(12345.5, 1), '12.345,5');
   assert.equal(pickLang('xx'), DEFAULT_LANG);
-  assert.equal(pickLang('vi'), 'vi');
+  assert.equal(pickLang('it'), 'it');
 });

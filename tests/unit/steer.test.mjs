@@ -10,7 +10,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-steer-'));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 test('the line a session\'s inbox takes', () => {
-  assert.equal(steerLine('sửa luôn test'), '{"type":"user","message":{"role":"user","content":"sửa luôn test"}}\n');
+  assert.equal(steerLine('correggi il test'), '{"type":"user","message":{"role":"user","content":"correggi il test"}}\n');
   assert.equal(steerLine('a\nb "q"').split('\n').length, 2);   // (one line, whatever the note says)
 });
 
@@ -48,9 +48,9 @@ test('a note written into an inbox socket, and none where nothing listens', { sk
   await new Promise((r) => srv.listen(p, r));
   assert.equal(isSocket(p), true);
   assert.equal(isSocket(path.join(dir, 'cfg')), false);
-  assert.equal(await deliver(p, 'sai file rồi, dừng'), true);
+  assert.equal(await deliver(p, 'file sbagliato, fermati'), true);
   await new Promise((r) => setTimeout(r, 50));
-  assert.deepEqual(got.map((x) => JSON.parse(x)), [{ type: 'user', message: { role: 'user', content: 'sai file rồi, dừng' } }]);
+  assert.deepEqual(got.map((x) => JSON.parse(x)), [{ type: 'user', message: { role: 'user', content: 'file sbagliato, fermati' } }]);
   srv.close();
   assert.equal(await deliver(path.join(dir, 'gone.sock'), 'x'), false);
 });

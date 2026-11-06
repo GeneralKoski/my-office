@@ -22,7 +22,6 @@ import { createVault } from './vault.mjs';
 import { MAIN, SUB, modelsOf, withModels, hasSplit, withSplit } from './models.mjs';
 import { createCodexAccounts } from './codex-accounts.mjs';
 import { createAntigravityAccounts, makeDb, windowsOf } from './antigravity-accounts.mjs';
-import { report as promptReport } from './prompt-report.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
@@ -33,7 +32,6 @@ import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createBg, bgSettings, printSettings } from './bg-sessions.mjs';
 import { steerable, inboundFrom, isSocket, deliver } from './steer.mjs';
-import { createRewriter } from './rewrite.mjs';
 import { createPush } from './push.mjs';
 import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
 import { createClaudeVersion } from './claude-version.mjs';
@@ -62,10 +60,10 @@ const SESS_DIR = path.join(CLAUDE_DIR, 'sessions');
 // OFFICE_LOG: append the server's output to a file (the Windows sign-in script has nowhere else to put it)
 if (process.env.OFFICE_LOG) { const out = fs.createWriteStream(process.env.OFFICE_LOG, { flags: 'a' }); process.stdout.write = process.stderr.write = out.write.bind(out); }
 const DATA_DIR = dataDir(ROOT);   // tests and a second dev copy use their own
-// what you pinned for each conversation ("Ghi nhớ cho Claude", further down): read before any session is shown
+// what you pinned for each conversation (pins for Claude, further down): read before any session is shown
 const PINS_FILE = path.join(DATA_DIR, 'pins.json'), PIN_MAX = 12, PIN_LEN = 500;
 let pins = {}; try { pins = JSON.parse(fs.readFileSync(PINS_FILE, 'utf8')) || {}; } catch { /* none yet */ }
-// the office's own copies of what Claude's file tools change, per turn ("Hoàn tác lượt cuối", further down): made before any session is shown
+// the office's own copies of what Claude's file tools change, per turn (undo of the last turn, further down): made before any session is shown
 const undo = createUndo({ dir: path.join(DATA_DIR, 'undo') });
 const PAGE_FILES = new Set(['/favicon.ico', '/icon.svg', '/apple-icon.png', '/opengraph-image.jpg', '/twitter-image.jpg', '/manifest.webmanifest', '/sw.js', '/icon-512.png']);   // (app/: the tab icons, the share card, the app on a phone's home screen; public/: its worker and big icon)
 const prefs = createPrefs(DATA_DIR), { tr } = prefs;   // tr('area.key', vars): words in the office's language (src/i18n)
@@ -143,53 +141,6 @@ function bashLabel(i) {
   return clip(hit ? `${tr(`server.cmd.${hit[1]}`)} · ${short}` : short, 48);
 }
 
-// When the office speaks Vietnamese, English descriptions (written by Claude) become Vietnamese via Google's free
-// translate endpoint, cached on disk. OFFICE_TRANSLATE=0 keeps everything local.
-const VI_CHARS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
-const TRANSLATE = process.env.OFFICE_TRANSLATE !== '0';
-const VI_FILE = path.join(DATA_DIR, 'vi-cache.json');
-let viCache = {};
-try { viCache = JSON.parse(fs.readFileSync(VI_FILE, 'utf8')); } catch { /* first run */ }
-let viDirty = false;
-setInterval(() => {
-  if (!viDirty) return;
-  viDirty = false;
-  const keys = Object.keys(viCache);
-  if (keys.length > 3000) for (const k of keys.slice(0, keys.length - 3000)) delete viCache[k];
-  fsp.writeFile(VI_FILE, JSON.stringify(viCache)).catch(() => {});
-}, 15_000).unref();
-// One request per text at a time, three tries a few seconds apart (the free endpoint rate-limits in bursts).
-const viWait = new Map();
-function fetchVi(text) {
-  if (viWait.has(text)) return viWait.get(text);
-  const job = (async () => {
-    for (let k = 0; k < 3; k++) {
-      try {
-        const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(text)}`, { signal: AbortSignal.timeout(4000) });
-        if (r.ok) { const j = await r.json(); const out = (j?.[0] || []).map((x) => x?.[0] || '').join('').trim(); if (out) { viCache[text] = out; viDirty = true; return out; } }
-      } catch { /* offline or rate-limited */ }
-      await new Promise((res) => setTimeout(res, 1500 * (k + 1)));
-    }
-    return null;
-  })().finally(() => viWait.delete(text));
-  viWait.set(text, job);
-  return job;
-}
-// Waits up to 1.5 s; a translation that lands later is sent as {k:'vi', from, to} and the page swaps the words in.
-async function toVi(text) {
-  if (!TRANSLATE || prefs.lang() !== 'vi' || !text || VI_CHARS.test(text) || !/[a-z]{3}/i.test(text)) return text;
-  if (viCache[text]) return viCache[text];
-  const job = fetchVi(text);
-  const out = await Promise.race([job, new Promise((res) => setTimeout(() => res(undefined), 1500))]);
-  if (out) return out;
-  if (out === undefined) job.then((late) => {
-    if (!late) return;
-    for (const x of feed) { if (x.label === text) x.label = late; if (x.desc === text) x.desc = late; }
-    for (const s of sessions.values()) for (const o of [s, ...Object.values(s.subs || {})]) { if (o.last?.label === text) o.last.label = late; if (o.desc === text) o.desc = late; }
-    broadcast({ k: 'vi', from: text, to: late });
-  });
-  return text;
-}
 /* ---------- images a session touched: the feed shows them, a click opens them (GET /api/image?id=) ----------
    Only files a session read, wrote or edited with an image's extension, looked up by an id (never a path sent by the
    page); the last 400 remembered across restarts (data/images.json). */
@@ -206,12 +157,6 @@ function imageId(file) {
   clearTimeout(imgSave); imgSave = setTimeout(() => fsp.mkdir(DATA_DIR, { recursive: true }).then(() => fsp.writeFile(IMG_FILE, JSON.stringify(Object.fromEntries(images)))).catch(() => {}), 2000);
   return id;
 }
-async function classifyVi(name, input) {
-  const c = classify(name, input);
-  if (c.tr) c.label = await toVi(c.label);
-  if (c.desc) c.desc = await toVi(c.desc);
-  return c;
-}
 
 function classify(name = '', input = {}) {
   const i = input || {};
@@ -223,7 +168,7 @@ function classify(name = '', input = {}) {
     case 'Edit': case 'MultiEdit': return { type: 'edit', label: base(i.file_path), file: i.file_path };
     case 'NotebookEdit': return { type: 'edit', label: base(i.notebook_path) };
     case 'Write': return { type: 'write', label: base(i.file_path), file: i.file_path };
-    case 'Bash': return { type: 'bash', label: bashLabel(i), tr: !!i.description };
+    case 'Bash': return { type: 'bash', label: bashLabel(i) };
     case 'WebSearch': return { type: 'web', label: clip(redact(oneLine(i.query)), 48) };
     case 'WebFetch': return { type: 'fetch', label: host(i.url) };
     case 'Agent': case 'Task': return { type: 'agent', label: i.subagent_type || 'agent', desc: clip(redact(oneLine(i.description)), 50) };
@@ -281,9 +226,9 @@ const git = createGit({
 });
 const pollGit = () => git.poll([...sessions.values()].map((s) => s.cwd));
 
-/* ---------- "Sửa luôn": a repository's CI gone red. A card in the chat from the session working in it; its button hands
+/* ---------- CI fix: a repository's CI gone red. A card in the chat from the session working in it; its button hands
    Claude the failing run to fix (a note into the conversation while it works, else a message that carries it on, as
-   "Gửi tới" does). Phones may use it only when the Mac allows work from phones. ---------- */
+   writing to a conversation does). Phones may use it only when the Mac allows work from phones. ---------- */
 const runIdOf = (url) => /\/actions\/runs\/(\d+)/.exec(url || '')?.[1] || '';
 function ciCard(r) {
   const red = chat.state.msgs.findLast((m) => m.kind === 'ci' && m.ci?.repo === r.name && m.ci?.branch === r.branch && m.ci?.state === 'red');
@@ -294,7 +239,7 @@ function ciCard(r) {
   chat.ciCard(s.id, { repo: r.name, branch: r.branch, wf: r.ciName, url: r.ciUrl, sess: s.id, sid: s.sid || '', dir: s.cwd, state: 'red', fix: null });
   pushOut({ title: tr('server.ci.pushTitle', { repo: r.name }), body: tr('server.ci.pushBody', { wf: r.ciName || 'CI', branch: r.branch }), tag: `ci-${r.name}`, url: '/?chat' });
 }
-// the card's "Sửa luôn": { id } (the card) -> [status, { ok, how: 'note' | 'sent', message }]
+// the card's CI-fix button: { id } (the card) -> [status, { ok, how: 'note' | 'sent', message }]
 async function ciFix(b, who) {
   const m = chat.byId(String(b?.id || ''));
   if (m?.kind !== 'ci') return [404, { ok: false, message: tr('server.ci.gone') }];
@@ -382,7 +327,7 @@ function ensureSub(s, agentId, type, now) {
     lookModel(s, x, now);
     subMeta(s, agentId).then(async (m) => {
       if (!m) return;
-      x.desc = clip(redact(oneLine(await toVi(m.description || ''))), 70);
+      x.desc = clip(redact(oneLine(m.description || '')), 70);
       if (m.agentType) x.type = m.agentType;
       broadcast({ k: 'sess', s: pub(s) });
     });
@@ -603,7 +548,7 @@ chat = createChatEngine({
 setInterval(() => chat.clock(), 30_000).unref();
 const chatOut = () => ({ ok: true, msgs: chat.state.msgs, pinned: chat.state.pinned, typing: chat.state.typing });
 
-/* ---------- "Giao việc" (server/tasks.mjs): Claude Code runs started from the office ---------- */
+/* ---------- Giving work (server/tasks.mjs): Claude Code runs started from the office ---------- */
 const taskSids = new Set(), taskQuote = new Map();   // the sessions those runs became (their leaving isn't announced: their result is); your task, quoted in the answer
 // Phone work as Claude Code background sessions (server/bg-sessions.mjs), when switched on on the Mac and this Claude Code
 // has them: their settings call the office back the way the hooks do (curl; the small node script on Windows)
@@ -637,9 +582,6 @@ const tasks = createTasks({
     if (t.from?.orig && steerLater.has(t.from.orig)) setTimeout(() => sendLater(t.from.orig), 1500);   // (a note that couldn't get in: now, as a message)
   },
 });
-/* ---------- "✨ Viết lại cho rõ", the chat's prompt helper (server/rewrite.mjs): a message for Claude, made clearer by a
-   small model, on the account new sessions start on, in an empty folder of the office's ---------- */
-const rewriter = createRewriter({ claude: () => findClaude(), env: () => { const e = { ...process.env }; if (nowDir) e.CLAUDE_CONFIG_DIR = nowDir; return e; }, dir: path.join(DATA_DIR, 'rewrite') });
 /* ---------- notifications on the phones that said yes (server/push.mjs): Claude's answers, and an approval a run started
    from the office needs while nobody has the office open; none while an office page is looked at ---------- */
 const claudeVersion = createClaudeVersion({ dataDir: DATA_DIR });   // (Claude Code's version on this computer, server/claude-version.mjs)
@@ -647,7 +589,7 @@ const push = createPush({ dataDir: DATA_DIR, log: (l) => fsp.appendFile(ACTION_L
 const QUICK_FILE = path.join(DATA_DIR, 'quick.json');   // the chat's quick commands, once you change them (shared by the Mac and the phones)
 const pushOut = (msg) => { if (push.count() && !officeFocused()) push.notify(msg).catch(() => {}); };
 
-/* Writing to a conversation from the chat ("Gửi tới"): the first message branches it (its whole context, the one open in
+/* Writing to a conversation from the chat: the first message branches it (its whole context, the one open in
    your editor left as it is); what you write next carries on that branch, so it remembers what you said (for 6 hours). */
 const threads = new Map();   // the conversation's own id (or 'dir:' a project) -> { sid: the one carried on, at, running }
 // each run's card in the chat (Claude at work: its steps as they come, then done): task id -> { id, steps, n, at, timer }
@@ -768,13 +710,13 @@ function burnOut(range) {
     projects: r.projects.map((p) => ({ ...p, dir: tilde(p.cwd), cwd: undefined })), setup: otelOwner({ settings, managed: managedEnvs() }).state, plan };
 }
 
-/* Giving work to a conversation or a project ("Gửi tới", 📋 Giao việc), from the chat, a phone, or a note kept for when
+/* Giving work to a conversation or a project (from the chat's send box or the giving-work button), from the chat, a phone, or a note kept for when
    a conversation is done: [status, reply]. who: 'mac', 'phone <ip>' or 'queued', for the log. */
 async function giveWork(b, who) {
   // who it goes to: a conversation the office knows (carried on itself, the very one), or a project folder (a new
-  // conversation there, or the one you started there); one way for both the chat's "Gửi tới" and 📋 Giao việc
+  // conversation there, or the one you started there); one way for both the chat's send box and the giving-work button
   const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
-  const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && (knownDirs.find((d) => d === want) || stranded.dirOf(want));   // (or a worktree the Mac panel listed, "Giao Claude làm nốt")
+  const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && (knownDirs.find((d) => d === want) || stranded.dirOf(want));   // (or a worktree the Mac panel listed, handed over to Claude to finish)
   if (!s && !pdir) return [400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }];
   const text = String(b?.text || '').trim().slice(0, 4000), images = (Array.isArray(b?.images) ? b.images : []).slice(0, 4).map(String);
   if (!text) return [400, { ok: false, code: 'empty' }];
@@ -810,7 +752,7 @@ async function giveWork(b, who) {
   return [r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) }];
 }
 
-/* ---------- "Chen lời giữa chừng" (server/steer.mjs): a note into a conversation while it works ----------
+/* ---------- Steering a working session (server/steer.mjs): a note into a conversation while it works ----------
    POST /api/tasks/steer { task | sid | dir, text }: a run the office started (its card), a conversation (its session id),
    or the one the office carries on in a project. Into its inbox now when it can take one (Claude reads it between two
    steps); otherwise kept, one per conversation (what you add joins it), and sent as an ordinary message once it is done. */
@@ -851,7 +793,7 @@ async function sendLater(key) {
   if (code !== 200) chat.system(tr('chat.steer.notSent', { name: x.name, why: out?.message || tr('drawer.unreachable') }));
 }
 
-/* ---------- the project folders sessions have worked in: where "Giao việc" may start a new conversation (a phone
+/* ---------- the project folders sessions have worked in: where giving work may start a new conversation (a phone
    picks one of these, never a path of its own); the last 30, kept in data/projects.json ---------- */
 const DIRS_FILE = path.join(DATA_DIR, 'projects.json');
 let knownDirs = []; try { knownDirs = JSON.parse(fs.readFileSync(DIRS_FILE, 'utf8')).filter((d) => typeof d === 'string'); } catch { /* none yet */ }
@@ -1055,14 +997,14 @@ async function onHook(p) {
       s.lastPrompt = clip(redact(said), 90);
       s.taskStart = now;
       if (!s.viaOffice) s.saidAt = now;
-      undo.prompt(sid, said);   // (a new turn: the files it changes are copied first, for "Hoàn tác lượt cuối")   // (written by you, not a run the office started: the Mac panel's "you're talking here")
+      undo.prompt(sid, said);   // (a new turn: the files it changes are copied first, for undoing the last turn)   // (written by you, not a run the office started: the Mac panel's "you're talking here")
       stats.prompts++; dirty = true; trophies.bump('prompts'); trophies.session(s.sid);
       e = mk('prompt', clip(s.lastPrompt, 64));
       Object.defineProperty(e, 'full', { value: clip(redact(unwrapPaste(String(p.prompt || '').replace(STRIP_TAGS, '')).trim()), 4000), enumerable: false });   // (the chat shows it whole)
       break;
     }
     case 'PreToolUse': {
-      const c = await classifyVi(p.tool_name, p.tool_input);
+      const c = classify(p.tool_name, p.tool_input);
       const runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);   // a test run: the test board lights up for it
       if (runner) Object.assign(c, { type: 'test', runner });
       if (!agent) { if (s.status === 'rest' && !s.taskStart) s.taskStart = now; s.status = 'work'; s.inTool = true; s.last = { type: c.type, label: c.label }; }
@@ -1091,7 +1033,7 @@ async function onHook(p) {
       if (!agent) s.inTool = false;
       if (p.tool_name === 'Bash') portClash(s, sid, portInUse(p.error));
       if (s.status === 'wait') s.status = 'work';
-      const c = await classifyVi(p.tool_name, p.tool_input), runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);
+      const c = classify(p.tool_name, p.tool_input), runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);
       // (a failing test run is the test board's red lamp, not a failure that counts towards an incident)
       e = runner ? mk('testfail', runner, { agent, quiet: !!agent, ...(testCounts(p.error) || {}) }) : mk('fail', c.label || p.tool_name || '', { agent, quiet: !!agent });
       if (agent) toFeed = false;
@@ -1099,7 +1041,7 @@ async function onHook(p) {
     }
     case 'PermissionRequest': {
       s.status = 'wait';
-      const c = await classifyVi(p.tool_name, p.tool_input);
+      const c = classify(p.tool_name, p.tool_input);
       e = mk('wait', c.label || p.tool_name || '');
       break;
     }
@@ -1121,7 +1063,7 @@ async function onHook(p) {
       break;
     }
     case 'Stop':
-      undo.stop(sid);   // (the turn is over: "Hoàn tác lượt cuối" may now put its files back)
+      undo.stop(sid);   // (the turn is over: undoing the last turn may now put its files back)
       setTimeout(() => refreshTitle(s), 4000); usageAfterTurn();
       if (steerLater.has(sid) && !tasks.of(sid)) setTimeout(() => sendLater(sid), 2000);   // (a note that couldn't get in while it worked: now; a run's own: when it ends)
       s.inTool = false;
@@ -1200,9 +1142,8 @@ async function readLog(s, n = 120, agentId = null) {
         for (const b of c) {
           if (b.type === 'text' && b.text?.trim()) items.push({ role: 'claude', text: clip(redact(b.text.trim()), 12000), ts });
           else if (b.type === 'tool_use') {
-            // Bash descriptions are already translated when the hook saw them; reuse the cache, never wait on the network here.
             const k = classify(b.name, b.input);
-            items.push({ role: 'tool', type: k.type, label: (k.tr && viCache[k.label]) || k.label, desc: k.desc ? viCache[k.desc] || k.desc : '', ts });
+            items.push({ role: 'tool', type: k.type, label: k.label, desc: k.desc || '', ts });
           }
         }
       }
@@ -1403,7 +1344,7 @@ async function onPermission(p, res, long = false) {
   const hold = holdFor();
   if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || (!hold && !ours && !long)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
-  const c = await classifyVi(p.tool_name, p.tool_input);
+  const c = classify(p.tool_name, p.tool_input);
   const suggestion = Array.isArray(p.permission_suggestions) ? p.permission_suggestions.find((x) => x && x.type === 'addRules' && x.behavior === 'allow') || null : null;
   const id = crypto.randomUUID(), now = Date.now();
   const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, type: c.type, label: c.label, detail: permDetail(p),
@@ -1419,7 +1360,7 @@ async function onPermission(p, res, long = false) {
       res.on('close', () => { if (cards.get(run.id) === card) { card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); } }); } }
 }
 
-/* ---------- "Ghi nhớ cho Claude": what you pin for a conversation (the session drawer's "Ghi nhớ" tab), said to Claude
+/* ---------- Pins for Claude: what you pin for a conversation (the session drawer's pins tab), said to Claude
    again each time Claude Code compacts it, when what it was told along the way may be summed up away. The synchronous
    SessionStart hook (matcher "compact") gets them as additionalContext. Kept by the conversation's id in
    data/pins.json, so they outlive the office starting again: 12 a conversation, 500 characters each, 300
@@ -1452,9 +1393,8 @@ async function onStart(p) {
   return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: `${tr('server.pins.context')}\n${list.map((x) => `- ${x.text}`).join('\n')}` } };
 }
 
-/* ---------- "Hộp lệnh bị chặn": a call auto mode refused (the synchronous PermissionDenied hook). A card in the chat
-   says what was refused and why. While an office page has focus, Claude Code waits up to 40 s for "Cho Claude thử
-   lại" (retry: Claude is told it may try the call again, which goes through auto mode again) or "Giữ chặn"; with none,
+/* ---------- Denied commands: a call auto mode refused (the synchronous PermissionDenied hook). A card in the chat
+   says what was refused and why. While an office page has focus, Claude Code waits up to 40 s for "retry" (Claude is told it may try the call again, which goes through auto mode again) or "keep blocked"; with none,
    or when auto mode gave no verdict (a retry would be ignored), the refusal stands at once and the card keeps it on
    record, the command ready to copy. Phones answer only when the Mac lets them approve. ---------- */
 const DENY_HOLD_MS = 40_000;
@@ -1480,7 +1420,7 @@ async function onDenied(p, res) {
   res.on('close', () => { if (deniedHeld.get(m.id) === settle) { deniedHeld.delete(m.id); clearTimeout(timer); chat.setDeny(m.id, { state: 'kept', until: 0 }); } });   // (Claude Code gave up waiting)
 }
 
-/* ---------- "Hoàn tác lượt cuối" (server/undo.mjs): the files Claude's file tools changed in a conversation's last
+/* ---------- Undo of the last turn (server/undo.mjs): the files Claude's file tools changed in a conversation's last
    turn, put back from the office's own copies (made by /hook/loop before each write). Only once the turn is over and
    the session rests; what is there now is kept in data/undo/<session>/<turn>/after. Phones may only when the Mac lets
    them give work. ---------- */
@@ -1558,7 +1498,7 @@ function planDecision(p, choice, note) {
   return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: why ? tr('server.perm.planReviseWhy', { why }) : tr('server.perm.planRevise') } };
 }
 
-/* ---------- "Ngắt vòng lặp kẹt": a session going round in circles (server/loops.mjs) ----------
+/* ---------- Stuck-loop breaker: a session going round in circles (server/loops.mjs) ----------
    The async hooks and the status line feed it; a synchronous PreToolUse hook (curl, 0.3 s at most, nothing printed
    when the office is down or slow: the call goes ahead) posts each call to /hook/loop, which answers at once. The Nth
    identical failure makes the next identical call denied with a reason Claude reads; the person's name tag goes red,
@@ -1607,7 +1547,7 @@ function loopReply(p) {
       : hint ? { hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: hint } } : null;
   return { out, sig: r.sig };
 }
-/* ---------- "Chặn ghi đè và giành cổng" (server/overlap.mjs): two sessions on one file, a port another process holds.
+/* ---------- Overwrite and port guard (server/overlap.mjs): two sessions on one file, a port another process holds.
    Told to the session's Claude with its next tool call (the synchronous hook above), and said in the chat. ---------- */
 const overlap = createOverlap();
 const nameOfSid = (sid) => { const x = bySid(sid); return x ? x.title || x.name : String(sid || '').slice(0, 8); };
@@ -1716,7 +1656,7 @@ function onStatus(p) {
   }
 }
 
-/* ---------- the prompt cache's clock ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js) ----------
+/* ---------- the prompt cache's clock (src/shared/cache-clock.js) ----------
    Per session: until when its cache stays warm and what the next message re-reads once it is cold, from the status
    line (prompt_cache), a resumed session's SessionStart, or, with neither, guessed from the end of its last turn and the
    documented lifetime: an hour on a subscription (the plan's limits are known), five minutes otherwise. */
@@ -1825,7 +1765,7 @@ function scanAccounts() {
     repick();
   }
 }
-/* ---------- "Kho lịch sử" (server/vault.mjs): the words of every conversation, kept after Claude Code deletes its
+/* ---------- History vault (server/vault.mjs): the words of every conversation, kept after Claude Code deletes its
    transcript (30 days by default). Every account's projects folder, read 90 s after the office starts, then every 3
    hours; searched and read from the vault drawer (ui/vault.js). OFFICE_VAULT=0 turns it off. ---------- */
 const vault = process.env.OFFICE_VAULT === '0' ? null : createVault({ dir: path.join(DATA_DIR, 'vault'), claudeDirs: () => [CLAUDE_DIR, ...otherDirs], log: (s) => console.log(s) });
@@ -1869,25 +1809,6 @@ async function renameChat(b) {
   fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} rename ${sid} ${file ? 'transcript' : 'vault only'}\n`).catch(() => {});
   return [200, { ok: true, title, how: file ? 'file' : 'vault' }];
 }
-/* ---------- "Phiếu điểm prompt" (server/prompt-report.mjs): the last 7 days of what you wrote, against the 7 before,
-   with the chat's prompt-helper rules; the vault drawer's second tab, and a line in the chat on Monday morning ---------- */
-let reportCache = null;
-async function reportOut() {
-  if (!vault) return { ok: false, off: true };
-  if (reportCache && Date.now() - reportCache.at < 10 * 60e3) return reportCache.out;
-  const now = Date.now(), D = 864e5;
-  const out = { ok: true, now: promptReport(await vault.prompts(now - 7 * D, now)), prev: promptReport(await vault.prompts(now - 14 * D, now - 7 * D)) };
-  reportCache = { at: now, out };
-  return out;
-}
-const delta = (a, b) => (a == null || b == null ? '' : `${a - b >= 0 ? '+' : '−'}${Math.abs(a - b)}`);
-setInterval(async () => {
-  const d = new Date(), week = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toLocaleDateString('sv');
-  if (!vault || d.getDay() !== 1 || d.getHours() < 9 || prefs.get('reportWeek') === week) return;
-  prefs.set('reportWeek', week);
-  const r = await reportOut().catch(() => null);
-  if (r?.ok && r.now.n >= 10) chat.system(tr('chat.report.monday', { pct: r.now.pct, delta: delta(r.now.pct, r.prev.pct) || '–', n: r.now.n }));
-}, 30 * 60e3).unref();
 function othersOut() {
   return otherDirs.map((d) => { const o = others.get(d) || {}, slug = accName(d);
     return { name: slug, label: acctLabel(slug), until: blockedUntil(o.windows, hits.get(slug)), at: o.at || 0, account: o.account || null, windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
@@ -1929,7 +1850,7 @@ setInterval(scanAccounts, 60_000).unref();   // (a login made in a terminal show
    prepareAccount(name): a config folder of its own (~/.claude-<name>), the office's hooks and status line in its
    settings.json (the CLI's own install, --settings: the same entries as the main account's), and the command that opens
    Claude Code with it, to log in. Then the office looks for that login every few seconds for a while. */
-const slugOf = (name) => String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20).replace(/-+$/, '');
+const slugOf = (name) => String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20).replace(/-+$/, '');
 /* Claude Code's CLI: on the PATH, else the usual install places and the editors' extensions (VS Code, Cursor, Windsurf,
    Antigravity…: the newest), where it often is when Claude Code came with an editor and was never put on the PATH */
 let claudeBin = null;
@@ -2427,7 +2348,7 @@ const ag = AI_OFF ? null : createAntigravityAccounts({
     } else if (what?.waiting) chat.system(tr('chat.ai.agWaiting', { from: name(what.waiting.from), to: name(what.waiting.to), app: AG_APP }));
   },
 });
-const hhmmOf = (t) => new Date(t).toLocaleTimeString(prefs.lang() === 'vi' ? 'vi-VN' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
+const hhmmOf = (t) => new Date(t).toLocaleTimeString(prefs.lang() === 'it' ? 'it-IT' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
 function aiOut() { return AI_OFF ? null : { codex: codex.out(), ag: ag.out() }; }
 /* ---------- the Mac's menu bar (menubar/MyOfficeBar.swift, built by `my-office install`) ----------
    What its icon shows, read every 3 seconds: how many sessions wait for you and how many are at work, the tightest limit
@@ -2478,7 +2399,7 @@ async function openWindow(s) {
   return new Promise((resolve) => execFile('open', args, { timeout: 8000 }, (err) => resolve(err ? { ok: false, message: tr('server.open.failed') } : { ok: true, app: path.basename(app, '.app') })));
 }
 
-/* ---------- "Việc bỏ quên": work left in the worktrees of the repositories sessions have worked in (server/stranded.mjs),
+/* ---------- Forgotten work: work left in the worktrees of the repositories sessions have worked in (server/stranded.mjs),
    for the Mac panel; open one, give Claude the rest of it, or remove a worktree with nothing left in it ---------- */
 const within = (child, dir) => !!child && (child === dir || child.startsWith(dir + path.sep));
 const stranded = createStranded({
@@ -2560,7 +2481,7 @@ const server = http.createServer((req, res) => {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
     loopHookAt = Date.now();
     readJson(req, 4_000_000).then((p) => {
-      // (a file tool about to write: its file copied first, for "Hoàn tác lượt cuối"; before the answer, so before the write)
+      // (a file tool about to write: its file copied first, for undoing the last turn; before the answer, so before the write)
       try { if (p && (!p.hook_event_name || p.hook_event_name === 'PreToolUse') && UNDO_TOOLS.has(p.tool_name)) undo.before(p.session_id, fileOf(p.tool_input, p.cwd || bySid(p.session_id)?.cwd)); } catch (err) { console.error('undo', err); }
       let r = null, x = null; try { r = p && loopReply(p); x = p && overlapNote(p); } catch (err) { console.error('loop', err); }
       const out = x?.text ? withContext(r?.out, x.text) : r?.out;
@@ -2588,9 +2509,9 @@ const server = http.createServer((req, res) => {
   }
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
-  // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it; the
-  // prompt helper's rewrite too). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/denied', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it).
+  // Everything else that changes something stays on the Mac and the home network.
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/denied', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2737,18 +2658,6 @@ const server = http.createServer((req, res) => {
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
       const [code, out] = await (url.pathname === '/api/tasks/steer' ? steerTo : giveWork)(b, mac ? 'mac' : `phone ${clientIp(req)}`);
       json(res, code, out);
-    });
-    return;
-  }
-  if (url.pathname === '/api/prompt/rewrite' && req.method === 'POST') {   // the chat's "✨ Viết lại cho rõ": { text, lang, photos: how many } -> { ok, text }
-    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
-    const mac = isLoopback(req);
-    // (it spends the plan's quota, as work does: from a phone only when the Mac allows work from phones)
-    if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
-    readJson(req, 40_000).then(async (b) => {
-      const r = await rewriter.rewrite({ text: b?.text, lang: pickLang(b?.lang), photos: b?.photos });
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} rewrite ${mac ? 'mac' : `phone ${clientIp(req)}`} ${r.ok ? 'ok' : r.code} ${String(b?.text || '').length} chars\n`).catch(() => {});   // (how long, never what it says)
-      json(res, r.ok ? 200 : r.code === 'busy' || r.code === 'tooMany' ? 429 : 409, r.ok ? { ok: true, text: r.text } : { ok: false, code: r.code, message: tr(`chat.coach.why.${r.code}`, { detail: r.detail || '' }) });
     });
     return;
   }
@@ -2985,7 +2894,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && url.pathname === '/api/pins') {   // the session drawer's "Ghi nhớ": { id (the session), op 'add' | 'del', text | pin }
+  if (req.method === 'POST' && url.pathname === '/api/pins') {   // the session drawer's pins tab: { id (the session), op 'add' | 'del', text | pin }
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
     readJson(req).then((b) => {
@@ -2999,7 +2908,7 @@ const server = http.createServer((req, res) => {
     readJson(req, 20_000).then((b) => renameChat(b)).then(([code, out]) => json(res, code, out)).catch(() => json(res, 500, { ok: false }));
     return;
   }
-  if (req.method === 'POST' && url.pathname === '/api/undo') {   // "Hoàn tác lượt cuối": { id (the session), op?: 'tell', files? }
+  if (req.method === 'POST' && url.pathname === '/api/undo') {   // undo of the last turn: { id (the session), op?: 'tell', files? }
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
     readJson(req).then(async (b) => {
@@ -3009,7 +2918,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && url.pathname === '/api/ci') {   // a red CI's card: { id } -> "Sửa luôn"
+  if (req.method === 'POST' && url.pathname === '/api/ci') {   // a red CI's card: { id } -> fix the CI
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
     readJson(req).then(async (b) => {
@@ -3077,7 +2986,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/tenure') { json(res, 200, tenureOut()); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
   if (url.pathname === '/api/quick') { let list = null; try { list = JSON.parse(fs.readFileSync(QUICK_FILE, 'utf8')); } catch { /* the page's own until you change them */ } json(res, 200, { ok: true, list }); return; }
-  if (url.pathname === '/api/claude-version') { json(res, 200, { ok: true, ...claudeVersion.get() }); return; }   // (a new one: someone goes to Thế Giới Di Động, outings.js)
+  if (url.pathname === '/api/claude-version') { json(res, 200, { ok: true, ...claudeVersion.get() }); return; }   // (a new one: a character goes to the phone shop for an upgrade, outings.js)
   if (url.pathname === '/api/push') { json(res, 200, { ok: true, key: push.publicKey, count: push.count(), on: push.has(String(url.searchParams.get('endpoint') || '')) }); return; }
   if (url.pathname === '/api/image') {   // (sandboxed and never sniffed: an SVG can't run anything opened on its own)
     const file = images.get(String(url.searchParams.get('id') || '')), type = file && IMG_EXT[path.extname(file).slice(1).toLowerCase()];
@@ -3154,13 +3063,12 @@ const server = http.createServer((req, res) => {
     replayRange(String(url.searchParams.get('day') || ''), from, to).then((r) => json(res, 200, r)).catch(() => json(res, 200, { items: [], truncated: false }));
     return;
   }
-  if (url.pathname === '/api/stranded') {   // the Mac panel's "Việc bỏ quên" (local: whether opening and removing are offered here)
+  if (url.pathname === '/api/stranded') {   // the Mac panel's forgotten work list (local: whether opening and removing are offered here)
     stranded.list({ force: url.searchParams.has('fresh') }).then((r) => json(res, 200, { ...r, local: isLoopback(req) })).catch(() => json(res, 200, { ok: false, items: [] }));
     return;
   }
   if (url.pathname === '/api/pins') { json(res, 200, pinsOut([...sessions.values()].find((x) => x.id === String(url.searchParams.get('id') || '')))); return; }
-  if (url.pathname === '/api/vault/report') { reportOut().then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the prompt report (server/prompt-report.mjs)
-  if (url.pathname === '/api/undo') { undoOut(sessionById(url.searchParams.get('id'))).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // what "Hoàn tác lượt cuối" would do
+  if (url.pathname === '/api/undo') { undoOut(sessionById(url.searchParams.get('id'))).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // what undoing the last turn would do
   if (url.pathname === '/api/vault') { vaultOut(url.searchParams, isLoopback(req)).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the history vault (server/vault.mjs)
   if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)
   if (url.pathname === '/api/sys') {
@@ -3175,7 +3083,7 @@ const server = http.createServer((req, res) => {
     const ck = isLoopback(req) ? null : pinCookieOf(req);
     if (!isLoopback(req) && (!ck || (ck.keep && ck.exp - Date.now() < (KEEP_DAYS - 30) * 86400e3))) res.setHeader('Set-Cookie', pinCookie(req));
     if (url.pathname === '/index.html') req.url = '/' + url.search;
-    req.headers['x-office-lang'] = pickLang(url.searchParams.get('lang') || prefs.lang());   // ?lang=vi: one visit in another language
+    req.headers['x-office-lang'] = pickLang(url.searchParams.get('lang') || prefs.lang());   // ?lang=it: one visit in another language
     nextHandle(req, res);
     return;
   }
@@ -3240,7 +3148,7 @@ function setRcAtStartup(on) {
   if (on) cfg.remoteControlAtStartup = true; else delete cfg.remoteControlAtStartup;
   try { fs.mkdirSync(path.dirname(real), { recursive: true }); fs.writeFileSync(`${real}.office-tmp`, `${JSON.stringify(cfg, null, 2)}\n`); fs.renameSync(`${real}.office-tmp`, real); return true; } catch { return false; }
 }
-/* "Model: người điều phối và subagent" (Settings → More; server/models.mjs): the main session's model in the same
+/* Coordinator and subagent models (Settings → More; server/models.mjs): the main session's model in the same
    settings, the subagents' in its env block, and the office's note in ~/.claude/CLAUDE.md asking Claude to hand the
    independent parts of a big task to subagents. Written through the links, as the other accounts share both files. */
 const CC_MEMORY = path.join(CLAUDE_DIR, 'CLAUDE.md');

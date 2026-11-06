@@ -1,4 +1,4 @@
-// "Giao việc": giving Claude work from the office, on a phone too. A Claude Code run on this Mac with your words and your
+// Tasks: giving Claude work from the office, on a phone too. A Claude Code run on this Mac with your words and your
 // photos, either carrying on from a conversation you tag (its whole context, as a new branch of it: --resume <its id>
 // --fork-session, so the conversation open in your editor is left exactly as it is) or as a new conversation in a
 // project folder the office knows (one a session has worked in: never a path typed on a phone). It runs as `claude -p`

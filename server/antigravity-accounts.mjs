@@ -1,4 +1,4 @@
-// "Nhiều tài khoản Antigravity": the Google accounts Antigravity IDE signs in with, one at a time. The IDE keeps its
+// Multiple Antigravity accounts: the Google accounts Antigravity IDE signs in with, one at a time. The IDE keeps its
 // sign-in and what it last heard of the account (name, plan, each model's quota left and when it resets) in its own
 // state database (User/globalStorage/state.vscdb, table ItemTable): antigravityUnifiedStateSync.oauthToken and
 // .userStatus, protobuf records wrapped in base64. The office reads them (sqlite3, read-only) every few seconds and

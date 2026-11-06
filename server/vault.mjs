@@ -1,4 +1,4 @@
-// "Kho lịch sử": Claude Code deletes a conversation's transcript after cleanupPeriodDays (30 by default). The office
+// History vault: Claude Code deletes a conversation's transcript after cleanupPeriodDays (30 by default). The office
 // keeps the words of each one in data/vault: what you wrote, what Claude answered, its title, folder and times; one
 // gzip per conversation (c/<session id>.json.gz) and an index (index.json). Screenshots, tool calls and their output are
 // left out, so a month of transcripts (GBs) is a few MB here. Read from every account's projects folder (one that is a
@@ -19,11 +19,11 @@ const WRAPS = /<(system-reminder|ide_opened_file|ide_selection|command-name|comm
 export function cleanPrompt(text) {
   return String(text || '').replace(WRAPS, '').replace(/<\/?pasted_content[^>]*>/g, '').trim();
 }
-// for search: lower case, without Vietnamese accents ("sửa lỗi" is found by "sua loi")
-export const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
+// for search: lower case, without accents ("perché" is found by "perche")
+export const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /** One transcript read into its words: { title, cwd, start, end, msgs: [{ r: 'u' | 'c', t, at, ph? }] } (ph: how many
- *  screenshots went with what you wrote, for the prompt report: server/prompt-report.mjs). */
+ *  screenshots went with what you wrote). */
 export async function readTranscript(file) {
   const out = { title: '', cwd: '', start: 0, end: 0, msgs: [] };
   let custom = null, ai = null;
@@ -121,16 +121,6 @@ export function createVault({ dir, claudeDirs, now = Date.now, log = () => {} })
     }
     return out;
   }
-  /** What you wrote between two times, from every conversation kept: [{ t, ph, at, sid, title }], oldest first. */
-  async function prompts(from, to) {
-    const out = [];
-    for (const e of index.values()) {
-      if (e.end < from || (e.start && e.start > to)) continue;
-      const rec = await get(e.sid); if (!rec) continue;
-      for (const m of rec.msgs) if (m.r === 'u' && m.at >= from && m.at < to) out.push({ t: m.t, ph: m.ph || 0, at: m.at, sid: e.sid, title: e.title });
-    }
-    return out.sort((a, b) => a.at - b.at);
-  }
   /** A new title for a kept conversation (the transcript itself is renamed by the caller): its index line and its words. */
   async function rename(sid, title) {
     const e = index.get(sid); if (!e) return false;
@@ -141,5 +131,5 @@ export function createVault({ dir, claudeDirs, now = Date.now, log = () => {} })
     return true;
   }
   const stats = () => { let gone = 0, bytes = 0; for (const e of index.values()) { if (e.gone) gone++; bytes += e.bytes || 0; } return { n: index.size, gone, bytes, at: scannedAt }; };
-  return { scan, search, get, prompts, stats, rename };
+  return { scan, search, get, stats, rename };
 }

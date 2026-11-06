@@ -5,7 +5,7 @@ import { t as tr } from '../i18n/index.js';
 import { el, level, resetText } from './fmt.js';
 
 // 5 hours first, then the week over all models, then each model's week, then the rest
-const ORDER = (w) => (w.key === 'session' ? 0 : w.key === 'weekly' ? 1 : /tuần|week/i.test(w.label) ? 2 : 3);
+const ORDER = (w) => (w.key === 'session' ? 0 : w.key === 'weekly' ? 1 : /week/i.test(w.label) ? 2 : 3);
 export const liveWindows = (ws) => (ws || []).filter((w) => !w.resetsAt || w.resetsAt > Date.now()).sort((a, b) => ORDER(a) - ORDER(b));
 
 function rowOf(w) {

@@ -1,7 +1,7 @@
 // What eats the plan (server/otel.mjs): reading OTLP JSON, counting each request once whatever the temporality, the day
 // rollups on disk, and numbers that add up. The fixtures (tests/fixtures/otel, made by make.mjs there) are OTLP/HTTP JSON
 // with the attribute names of code.claude.com/docs/en/monitoring-usage; the docs list the names, not a wire sample.
-process.env.TZ = 'Asia/Ho_Chi_Minh';   // (the days are local days: one zone for every machine that runs this)
+process.env.TZ = 'Asia/Bangkok';   // (the days are local days: one zone for every machine that runs this)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -207,7 +207,7 @@ test('summarize alone: shares fall back to tokens when nothing has a price, and 
   const r = summarize([['2026-10-30', { s: { x: { m: {}, e: { 'claude-x\tmain\t\t\t\t': [0, 100, 50, 0, 0, 1] } } } }]], {});
   assert.equal(r.money, false);
   assert.equal(r.sessions[0].share, 1);
-  assert.equal(dayKey(Date.parse('2026-10-30T18:00:00Z')), '2026-10-31');   // (01:00 in Hồ Chí Minh City)
+  assert.equal(dayKey(Date.parse('2026-10-30T18:00:00Z')), '2026-10-31');   // (01:00 the next day, UTC+7)
   assert.equal(projectOf('/a/b/repo/.claude/worktrees/feat-x'), 'repo');
   assert.equal(projectOf(''), '');
 });

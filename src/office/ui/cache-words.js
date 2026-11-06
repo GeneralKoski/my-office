@@ -1,4 +1,4 @@
-// How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js): the line under the
+// How a session's prompt cache reads on screen (src/shared/cache-clock.js): the line under the
 // session page's folder.
 import { $, nowMs } from '../core/env.js';
 import { state } from '../core/state.js';
@@ -8,7 +8,7 @@ import { t as tr, num } from '../../i18n/index.js';
 
 const mins = (ms) => Math.max(1, Math.round(ms / 60e3));
 const tok = (n) => (n >= 1e6 ? `${num(n / 1e6, 1)}M` : `${Math.max(1, Math.round(n / 1000))}k`);
-/** cache (a session's, from the server) -> { state: 'warm' | 'cold' | 'none', text } ("Bộ nhớ đệm còn ấm ~23 phút") */
+/** cache (a session's, from the server) -> { state: 'warm' | 'cold' | 'none', text } ("Cache still warm ~23 min") */
 function cacheWords(cache) {
   const k = cacheClock(cache, nowMs());
   if (k.state === 'none') return { state: 'none', text: '' };

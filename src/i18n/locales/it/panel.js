@@ -1,0 +1,31 @@
+// Il piccolo pannello (app/panel, src/panel/main.js): la barra laterale dell'editor, la barra dei menu del Mac
+export default {
+  connecting: 'Mi collego all\'ufficio…',
+  open3d: 'Apri l\'ufficio',
+  open2d: 'Vista elenco',
+  now: 'proprio ora',
+  until: 'Torno all\'IDE tra {s} s',
+  openWindow: 'Clic: porta la sua finestra in primo piano',
+  // la scheda di una sessione (src/panel/session-card.js)
+  card: {
+    dir: 'Cartella', branch: 'Branch', model: 'Modello', cost: 'Costo', cache: 'Prompt cache', acct: 'Account', did: 'Fatto finora',
+    dirty: { one: '{n} modifica non committata', other: '{n} modifiche non committate' }, ahead: { one: '{n} commit non pushato', other: '{n} commit non pushati' },
+    ciGreen: 'CI verde', ciRed: 'CI rossa',
+    ctx: 'contesto {pct}% ({used}/{max})', costApi: '≈ {usd} (a prezzi API)',
+    warm: 'calda da {time}', cold: 'fredda', counts: '{read} letture · {edit} modifiche · {cmd} comandi',
+    asked: 'Hai chiesto', doing: 'Sta facendo', reply: 'Ultima risposta',
+    todos: 'Checklist {done}/{n}', subs: 'Subagent ({n})', bg: 'Job in background ({n})', more: '+{n} altri',
+  },
+  status: { wait: 'Aspetta te', work: 'Al lavoro', done: 'Finito', rest: 'A riposo' },
+  subs: { one: '{n} subagent al lavoro', other: '{n} subagent al lavoro' },
+  working: '{n} al lavoro',
+  waiting: { one: '{n} aspetta te', other: '{n} aspettano te' },
+  bar: { allow: 'Consenti', deny: 'Nega', ide: 'Rispondi nell\'IDE', answer: 'Apri per rispondere', window: 'Apri la finestra della sessione', plan: 'Un piano richiede la tua approvazione', wait: '{name} aspetta te', done: '{name} ha finito', quit: 'Nascondi questa icona (finché l\'ufficio non riparte)' },
+  quiet: 'Tutto tranquillo',
+  keys: '⌃⌥O lo apre · ↑↓ scegli una sessione · Invio la sua finestra · Y / N approva · Esc chiude',
+  needsYou: 'Ha bisogno di te ({n})',
+  sessions: 'Sessioni',
+  mac: { title: '{Mac}' },
+  noSessions: 'Nessuna sessione Claude aperta. Avviane una e comparirà qui.',
+  offline: 'L\'ufficio non è in esecuzione. Avvialo con: my-office start',
+};

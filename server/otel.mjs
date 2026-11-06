@@ -1,4 +1,4 @@
-// What eats the plan ("Ăn gói"): a small OpenTelemetry receiver. Claude Code exports its cost and token counters
+// What eats the plan: a small OpenTelemetry receiver. Claude Code exports its cost and token counters
 // (metrics) and its api_request events (logs) as OTLP/HTTP JSON to /v1/metrics and /v1/logs on this server (loopback
 // only: server/index.mjs); they are summed per local day, per session and per attribution (model, query source,
 // subagent type, skill, plugin, MCP server) in data/otel/, the last 30 days kept. Only those few attributes are read:

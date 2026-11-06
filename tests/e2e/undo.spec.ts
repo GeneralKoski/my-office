@@ -3,9 +3,9 @@ import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import { HOME_DIR } from '../../playwright.config';
 
-// "Hoàn tác lượt cuối" (server/undo.mjs, ui/undo-view.js): the office copies each file the first time a turn's file
+// Undo of the last turn (server/undo.mjs, ui/undo-view.js): the office copies each file the first time a turn's file
 // tools touch it (the synchronous /hook/loop runs before every call), and puts them back from the session drawer.
-test.beforeEach(async ({ page }) => { await page.addInitScript(() => { try { localStorage.setItem('office-tips', 'seen'); localStorage.setItem('office-lite', 'off'); localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } }); });
+test.beforeEach(async ({ page }) => { await page.addInitScript(() => { try { localStorage.setItem('office-tips', 'seen'); localStorage.setItem('office-lite', 'on'); localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } }); });
 const DIR = path.join(HOME_DIR, 'undo-project'), A = path.join(DIR, 'a.txt'), B = path.join(DIR, 'b.txt');
 const base = { session_id: 'uu-undo-0000-1111', cwd: DIR };
 
@@ -24,8 +24,8 @@ test('the last turn undone from the drawer: an edited file back, a new one remov
   }
   await request.post('/event', { data: { ...base, hook_event_name: 'Stop', last_assistant_message: 'Better now.' } });
   // the drawer: the button, what it would do, two clicks
-  await page.goto('/?layout=cozy');
-  await page.locator('#rail-list .ri', { hasText: 'undo-project' }).click({ timeout: 120_000 });
+  await page.goto('/');
+  await page.locator('#lite .v2-row', { hasText: 'undo-project' }).click({ timeout: 120_000 });
   await page.locator('#ds-actions .btn', { hasText: 'Undo last turn' }).click();
   const v = page.locator('#ds-body .undo');
   await expect(v.locator('.undo-intro')).toContainText('make the files better');

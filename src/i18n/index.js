@@ -13,11 +13,11 @@
 // The office has one language, picked in Settings and kept by the server (data/prefs.json); the server renders the page
 // with <html lang="…">, and code in the browser reads it from there. The server builds its own t with createT(lang).
 import en from './locales/en/index.js';
-import vi from './locales/vi/index.js';
+import it from './locales/it/index.js';
 
 export const LANGS = {
   en: { name: 'English', locale: 'en-US', dict: en },
-  vi: { name: 'Tiếng Việt', locale: 'vi-VN', dict: vi },
+  it: { name: 'Italiano', locale: 'it-IT', dict: it },
 };
 export const DEFAULT_LANG = 'en';
 export const pickLang = (l) => (typeof l === 'string' && Object.hasOwn(LANGS, l) ? l : DEFAULT_LANG);

@@ -88,7 +88,7 @@ export default {
   pins: {
     tab: 'Pinned', tabN: 'Pinned ({n})',
     intro: 'What this conversation should always keep in mind. When Claude Code compacts its memory (long conversations), what you said along the way can be summed up away; the office says these again right after each compaction.',
-    placeholder: 'e.g. commit messages in Vietnamese · never push without asking',
+    placeholder: 'e.g. commit messages in English · never push without asking',
     add: 'Pin', remove: 'Unpin',
     empty: 'Nothing pinned yet.',
     said: 'Last said again at {time}.',

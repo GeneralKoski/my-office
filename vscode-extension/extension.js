@@ -23,7 +23,7 @@ function activate(context) {
         if (want === shown) return;
         shown = want;
         view.webview.html = want === 'down'
-          ? page(`<p>${vscode.env.language.startsWith('vi') ? 'Văn phòng chưa chạy. Bật bằng lệnh' : "My Office isn't running. Start it with"} <code>my-office start</code>.</p>`, port)
+          ? page(`<p>${vscode.env.language.startsWith('it') ? 'My Office non è in esecuzione. Avvialo con' : "My Office isn't running. Start it with"} <code>my-office start</code>.</p>`, port)
           : page(`<iframe src="http://127.0.0.1:${port}/panel?embed=ide" title="My Office"></iframe>`, port);
       };
       show();

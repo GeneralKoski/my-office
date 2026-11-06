@@ -3,7 +3,7 @@ import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import { HOME_DIR } from '../../playwright.config';
 
-// "Model: người điều phối và subagent" (server/models.mjs, ui/models.js): Settings → More writes the session's model
+// Coordinator and subagent models (server/models.mjs, ui/models.js): Settings → More writes the session's model
 // and its subagents' into Claude Code's settings (this test's own home), and the note asking Claude to split big tasks
 // into its CLAUDE.md; the rest of both files stays as it was.
 const SETTINGS = path.join(HOME_DIR, '.claude', 'settings.json'), MEMORY = path.join(HOME_DIR, '.claude', 'CLAUDE.md');

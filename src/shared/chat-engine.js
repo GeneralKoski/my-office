@@ -3,8 +3,8 @@
 // It knows nothing of files, pages or the 3D office: what it needs comes in ctx.
 //
 // People type for a moment before a line shows (emit 'typing'), react and answer each other, vote in polls, say yes
-// or no to a reminder, and answer you: @ someone and they say what they're on; "họp" / "meeting" rings the bell,
-// "trà sữa" / "milk tea" brings the Friday tea out (ctx.act). What the sessions say about their work comes from the
+// or no to a reminder, and answer you: @ someone and they say what they're on; "meeting" / "riunione" rings the bell,
+// "milk tea" / "tè al latte" brings the Friday tea out (ctx.act). What the sessions say about their work comes from the
 // hooks' events (onEvent); the office's life (a parcel, the tea, a birthday…) is told by the page where it happens,
 // as a finished line (say, with a key so two pages telling the same moment make one message).
 //
@@ -14,7 +14,7 @@
 const MAX = 300, PHOTOS = 6, KEYS = 600;
 export const REACTIONS = ['❤️', '👍', '😆', '😮', '😭', '😡'];
 const STAFF = { reception: '__reception', hr: '__hr', cleaner: '__cleaner', guard: '__guard', director: '__director', courier: '__courier', accountant: '__accountant', claude: '__claude' };
-const KINDS = new Set(['text', 'sticker', 'photo', 'poll', 'remind', 'sys', 'work', 'loop', 'ci', 'deny']);   // (work: Claude at work on what you sent it, a live card; loop: a session stuck in a loop, server/loops.mjs; ci: a repository's CI gone red, "Sửa luôn")
+const KINDS = new Set(['text', 'sticker', 'photo', 'poll', 'remind', 'sys', 'work', 'loop', 'ci', 'deny']);   // (work: Claude at work on what you sent it, a live card; loop: a session stuck in a loop, server/loops.mjs; ci: a repository's CI gone red, CI fix)
 const short = (s, n = 60) => { s = String(s ?? ''); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
 const rand = (a, b) => a + Math.random() * (b - a);
 const pickOne = (list) => list[Math.floor(Math.random() * list.length)];
@@ -97,8 +97,8 @@ export function createChatEngine(ctx) {
    *  'lost' | null, sess (its session), task (a run from the office) } */
   function loopCard(from, loop) { const p = who(from); if (!p) return null; return add({ from: p.key, name: p.name, kind: 'loop', text: '', loop }); }
   function setLoop(id, loop) { const m = byId(id); if (!m || m.kind !== 'loop') return; m.loop = { ...m.loop, ...loop }; update(m); }
-  /** A repository's CI gone red (server/git.mjs), with "Sửa luôn": ci { repo, branch, wf (the workflow), url (its run),
-   *  sess (the session in that repository), state 'red' | 'green', fix 'sent' | 'note' | null (what "Sửa luôn" did) } */
+  /** A repository's CI gone red (server/git.mjs), with a CI-fix button: ci { repo, branch, wf (the workflow), url (its run),
+   *  sess (the session in that repository), state 'red' | 'green', fix 'sent' | 'note' | null (what the fix did) } */
   function ciCard(from, ci) { const p = who(from); if (!p) return null; return add({ from: p.key, name: p.name, kind: 'ci', text: '', ci }); }
   function setCi(id, ci) { const m = byId(id); if (!m || m.kind !== 'ci') return; m.ci = { ...m.ci, ...ci }; update(m); }
   /** A call auto mode refused (server/index.mjs onDenied): deny { sess, tool, label, cmd, shell, reason, retry (whether a
@@ -137,7 +137,7 @@ export function createChatEngine(ctx) {
     say(from, short(q, 120), { now: true, pin: true, poll: { q: short(q, 120), opts: options.map((t) => ({ t, by: [] })) },
       then: (m) => { for (const id of resting()) timer(() => vote(m.id, id, Math.floor(Math.random() * options.length)), rand(5000, 70000)); } });
   }
-  /** A reminder card ("Nhắc hẹn"): title, when (ms), repeat ('week' or ''); people say yes over time; a line when it's due. */
+  /** A reminder card (reminder): title, when (ms), repeat ('week' or ''); people say yes over time; a line when it's due. */
   function remind(from, title, at, repeat = '', key) {
     const p = who(from); if (!p || !fresh(key)) return;
     system(tr('chat.sys.remind', { name: p.name }));
@@ -204,11 +204,11 @@ export function createChatEngine(ctx) {
     // a reply to one of theirs: that person answers it
     if (r && r.from !== 'me' && !named.some((m) => m.id === r.from) && who(r.from) && !r.from.startsWith('__')) say(r.from, tr('chat.reply.any'), { delay: rand(1200, 3500), reply: quote });
     const reply2 = (key, n = 1) => some(n).forEach((id, i) => say(id, tr(`chat.reply.${key}`), { delay: rand(1500, 4000) + i * 2500 }));
-    if (/họp|meeting|stand-?up/.test(low)) { ctx.act?.('meeting'); say('hr', tr('chat.life.meeting'), { delay: 700 }); reply2('meeting', 2); }
-    else if (/trà sữa|tra sua|milk ?tea|bubble tea/.test(low)) { ctx.act?.('tea'); reply2('milkTea', 3); }
-    else if (/về (nhà|đây|trước)|go(ing)? home|bye/.test(low)) reply2('goHome', 2);
-    else if (/giỏi|tốt lắm|cảm ơn|cám ơn|good job|well done|thank/.test(low)) reply2('praise', 2);
-    else if (/ăn gì|ăn trưa|lunch/.test(low)) poll('me', tr('chat.life.lunchPoll'), tr('chat.life.lunchOpts', null, 'list'));
+    if (/meeting|riunione|stand-?up/.test(low)) { ctx.act?.('meeting'); say('hr', tr('chat.life.meeting'), { delay: 700 }); reply2('meeting', 2); }
+    else if (/milk ?tea|bubble tea|tè al latte/.test(low)) { ctx.act?.('tea'); reply2('milkTea', 3); }
+    else if (/go(ing)? home|bye|vado a casa|torno a casa|a domani/.test(low)) reply2('goHome', 2);
+    else if (/good job|well done|thank|bravo|brava|ottimo lavoro|grazie/.test(low)) reply2('praise', 2);
+    else if (/lunch|pranzo/.test(low)) poll('me', tr('chat.life.lunchPoll'), tr('chat.life.lunchOpts', null, 'list'));
     else if (!named.length && !r && ok('me:any', 45e3)) reply2('any');   // (a plain line: one answer now and then, not one to every message)
     if (mine && Math.random() < 0.6) autoReact(mine, ['❤️', '👍'], Math.random() < 0.5 ? 1 : 2);
   }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Builds the online demo: a static site that plays the office's demo mode with no server behind it. English sits at
-// the root and every other language in its own folder (/vi/). Output: demo-site/, ready for GitHub Pages or any static
+// the root and every other language in its own folder (/it/). Output: demo-site/, ready for GitHub Pages or any static
 // host.
 //
 //   node scripts/build-demo.mjs                                  # served from the root of a domain

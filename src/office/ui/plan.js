@@ -7,8 +7,8 @@ import { t as tr } from '../../i18n/index.js';
 
 export const limitWarned = new Set();
 // 5 hours first, then the week over all models (personal plans), then each model's week, then anything else
-// (a model's week: the server labels it "Opus (week)" / "Opus (tuần)"; '7 ngày' is the label older servers saved)
-const WIN_ORDER = (w) => (w.key === 'session' ? 0 : w.key === 'weekly' ? 1 : /tuần|week/i.test(w.label) ? 2 : 3);
+// (a model's week: the server labels it "Opus (week)")
+const WIN_ORDER = (w) => (w.key === 'session' ? 0 : w.key === 'weekly' ? 1 : /week/i.test(w.label) ? 2 : 3);
 export const liveWindows = () => (state.limits?.windows || [state.limits?.five && { ...state.limits.five, key: 'session', label: tr('mac.plan.fiveHour') }, state.limits?.seven && { ...state.limits.seven, key: 'weekly', label: tr('mac.plan.week') }].filter(Boolean))
   .filter((w) => !w.resetsAt || w.resetsAt > Date.now()).map((w) => (w.key === 'weekly' && w.label === '7 ngày' ? { ...w, label: tr('mac.plan.week') } : w))
   .sort((a, b) => WIN_ORDER(a) - WIN_ORDER(b));

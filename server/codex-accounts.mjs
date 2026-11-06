@@ -1,4 +1,4 @@
-// "Nhiều tài khoản Codex": the ChatGPT accounts Codex signs in with, one at a time. Codex keeps its sign-in in
+// Multiple Codex accounts: the ChatGPT accounts Codex signs in with, one at a time. Codex keeps its sign-in in
 // $CODEX_HOME/auth.json (~/.codex): the seat. Each account the office knows has a copy of its own in <dir>/<id>/, a
 // Codex home of its own, so that `codex app-server` (Codex's own protocol, the one the editors' extension speaks) reads
 // that account's usage and refreshes its tokens without touching the seat. Using an account = its auth.json into the

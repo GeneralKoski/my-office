@@ -1,4 +1,4 @@
-// "Việc bỏ quên" (forgotten work): every git worktree, and the main checkout, of the repositories the office knows (the
+// Forgotten work: every git worktree, and the main checkout, of the repositories the office knows (the
 // folders sessions have worked in, and what Claude Code keeps under .claude/worktrees) that still holds work: files not
 // committed, commits not pushed, stashes. Read with git on this computer only when the Mac panel asks, a few calls at a
 // time, each with a timeout, the whole look capped in time and kept for 45 s; sizes (du) come one at a time afterwards.

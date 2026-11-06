@@ -1,4 +1,4 @@
-// "Model: người điều phối và subagent" (Settings → More; server/models.mjs): the model a Claude session runs on, the one
+// Coordinator and subagent models (Settings → More; server/models.mjs): the model a Claude session runs on, the one
 // its subagents run on, always that one or only when Claude doesn't pick, and the note asking Claude to split big tasks.
 // Read from the server each time Settings opens; on the Mac only (it writes Claude Code's own settings).
 import { $, STATIC } from '../core/env.js';

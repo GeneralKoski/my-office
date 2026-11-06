@@ -2,7 +2,7 @@
 import { state } from '../core/state.js';
 import { $, STATIC, rand } from '../core/env.js';
 import { sessions } from '../core/sessions.js';
-import { addFeed, queueFeed, queueUi, toast } from '../ui/activity.js';
+import { addFeed, queueUi, toast } from '../ui/activity.js';
 import { closeSession } from '../ui/session-drawer.js';
 import { acctMoved, acctSwitched, limitWarned, liveWindows, renderLimits } from '../ui/plan.js';
 import { TOKEN, removeSession, upsertSession } from '../net/live.js';
@@ -172,14 +172,6 @@ export function applyMsg(d, quiet = false) {
   else if (d.k === 'acctmove') { if (!quiet) acctMoved(d); }
   else if (d.k === 'limits') { state.limits = d.limits || null; state.limitsNote = d.note || ''; renderLimits(); }
   else if (d.k === 'sysauto') { if (!quiet) toast(d.message, 8000); }   // (idle sessions closed on their timer)
-  else if (d.k === 'vi') relabel(d.from, d.to);
-}
-// a translation that arrived after its event: swap the words in bubbles, the feed and the session list
-function relabel(from, to) {
-  if (!from || !to) return;
-  for (const e of state.feed) { if (e.label === from) e.label = to; if (e.desc === from) e.desc = to; }
-  for (const s of sessions.values()) for (const o of [s, ...(s.subs || [])]) { if (o.last?.label === from) o.last.label = to; if (o.desc === from) o.desc = to; }
-  queueFeed(); queueUi();
 }
 // Through the Cloudflare quick tunnel a stream's data is held back until it ends (quick tunnels don't do server-sent
 // events): there the page asks instead, GET /api/live, which answers as soon as there is something new (the same messages)
