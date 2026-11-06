@@ -5,8 +5,11 @@ import fsp from 'node:fs/promises';
 
 const exec = promisify(execFile);
 /** stdout of a command, '' if it failed or timed out (never throws). */
+// (numbers in the readings below are parsed as 0.5: a machine set to Italian prints 0,5, and ps, top and vm_stat then
+// came back as nothing, so the Mac panel saw no processes at all)
+const NUM_C = { ...process.env, LC_NUMERIC: 'C', ...(process.env.LC_ALL && { LC_ALL: 'en_US.UTF-8' }) };
 export async function sh(cmd, args, timeout = 15000, opts = {}) {
-  try { return (await exec(cmd, args, { maxBuffer: 64 * 1024 * 1024, timeout, windowsHide: true, ...opts })).stdout; }
+  try { return (await exec(cmd, args, { maxBuffer: 64 * 1024 * 1024, timeout, windowsHide: true, env: NUM_C, ...opts })).stdout; }
   catch (e) { return e.stdout || ''; }
 }
 export const readText = async (p) => { try { return await fsp.readFile(p, 'utf8'); } catch { return ''; } };
