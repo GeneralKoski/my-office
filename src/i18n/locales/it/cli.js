@@ -19,8 +19,6 @@ export default {
     lan: 'Aperto alla rete Wi-Fi: i telefoni entrano con il codice QR o con il PIN (my-office pin). Usalo solo su una rete di cui ti fidi.',
     local: 'Solo questo {mac} può vederlo. Per guardare dal telefono: my-office install --service --lan',
     next: 'Apri http://localhost:{port}, poi scrivi qualcosa in Claude Code per vedere entrare un personaggio.',
-    otel: 'Claude Code ora invia all\'ufficio i suoi numeri di utilizzo (solo su questo computer, i prompt restano nascosti): da una nuova sessione in poi vedrai cosa consuma il tuo piano. Aggiunto a {file}',
-    otelTheirs: 'Invii già la telemetria di Claude Code da qualche parte ({where}), quindi non l\'ho toccata. Per vedere anche "Cosa consuma il tuo piano", aggiungi l\'ufficio come secondo exporter nel tuo OpenTelemetry Collector:',
   },
   uninstall: {
     menubar: 'Tolta l\'icona dalla barra dei menu.',
@@ -65,17 +63,12 @@ export default {
     serviceUp: 'Servizio in background in esecuzione (parte quando accedi)',
     serviceDown: 'Il servizio in background è installato ma non è in esecuzione. Prova: {restart}',
     noService: 'Nessun servizio in background: il server gira solo mentre lo avvii tu. Installalo: my-office install --service',
-    otel: 'Claude Code invia i suoi numeri di utilizzo all\'ufficio ("Cosa consuma il tuo piano")',
-    otelTheirs: 'La telemetria di Claude Code va in un posto tuo ({where}): aggiungi l\'ufficio come secondo exporter per vedere cosa consuma il tuo piano (my-office install mostra come)',
-    noOtel: 'Claude Code non invia i suoi numeri di utilizzo all\'ufficio, quindi "Cosa consuma il tuo piano" resta vuoto. Esegui: my-office install',
-    otelAt: 'Numeri di utilizzo ricevuti {ago}',
-    otelSilent: 'Ancora nessun numero di utilizzo ricevuto: apri una nuova sessione di Claude Code (una già aperta mantiene le vecchie impostazioni) e invia un messaggio.',
   },
   pin: {
     changed: 'PIN cambiato. Ogni telefono collegato deve inserire quello nuovo.',
     show: 'PIN: {pin}',
   },
-  usage: 'Uso: my-office [start [--lan] | install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names] [--no-panel] [--no-menubar] | uninstall | doctor | pin [--new]] [--settings <path>]',
+  usage: 'Uso: my-office [start [--lan] | install [--service] [--lan] [--no-approve] [--no-status] [--no-panel] [--no-menubar] | uninstall | doctor | pin [--new]] [--settings <path>]',
   // la status line che Claude Code mostra sotto il prompt (hooks/status-line.mjs)
   status: { context: 'contesto {pct}', fiveHour: '5h {pct}', week: '7g {pct}' },
   error: 'Errore: {message}',

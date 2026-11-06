@@ -1,7 +1,7 @@
 // Settings the server itself needs, kept in data/prefs.json: the office's language, and whether idle Claude sessions
 // are closed on a timer. OFFICE_LANG sets the language until someone picks one in Settings. Every viewer (the Mac, a
 // phone) sees the office in this one language, because the server writes some of the words (event labels, cleanup
-// tips, trophy names).
+// tips).
 import fs from 'node:fs';
 import path from 'node:path';
 import { createT, pickLang, LANGS } from '../src/i18n/index.js';

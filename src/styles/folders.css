@@ -1,0 +1,98 @@
+/* New session (ui/folders.js): a page of its own like the archive: starred and recent folders on the left, the folders of
+   one level in the middle, and on the right what can be done in the folder shown (a new chat, the chats that ran in it). */
+.folders { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; background: var(--bg); animation: lite-page-in .16s ease-out; }
+.is-phone .folders, .is-phone #btn-new { display: none; }
+.fo-head { flex: none; display: flex; align-items: center; gap: 14px; padding: 12px 24px; background: var(--side); border-bottom: 1px solid var(--line); }
+.fo-head h2 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.folders .fo-back { flex: none; width: 38px; height: 38px; border: 1px solid var(--line-2); background: var(--card); color: var(--ink); }
+.folders .fo-back:hover { background: var(--card-3); }
+.folders .fo-back svg { width: 18px; height: 18px; }
+.fo-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 240px minmax(0, 1fr); }
+/* the rail */
+.fo-rail > *, .fo-here > * { flex: none; }
+.fo-rail { overflow-y: auto; padding: 14px 12px 24px; border-right: 1px solid var(--line); background: var(--side); display: flex; flex-direction: column; gap: 4px; }
+.fo-rsec { margin-top: 14px; display: grid; gap: 2px; }
+.fo-rsec h3 { margin: 0 0 4px 10px; font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.fo-rempty { margin: 0 10px; font-size: .76rem; color: var(--faint); }
+.fo-ritem { position: relative; display: flex; align-items: center; border-radius: 9px; }
+.fo-ritem:hover, .fo-ritem.is-on { background: var(--card-2); }
+.fo-ritem.is-on { box-shadow: inset 2px 0 0 var(--accent); }
+.fo-rgo, button.fo-home { all: unset; box-sizing: border-box; flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 8px 10px; cursor: pointer; border-radius: 9px; font-size: .84rem; }
+button.fo-home { flex: none; width: 100%; }
+.fo-rgo:focus-visible, button.fo-home:focus-visible { outline: 2px solid var(--accent-line); outline-offset: -2px; }
+.fo-rgo svg, .fo-home svg { flex: none; width: 16px; height: 16px; color: var(--muted); }
+.fo-rname { min-width: 0; display: grid; overflow: hidden; }
+.fo-rname b { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fo-rname small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: .66rem var(--mono); color: var(--faint); }
+.fo-rx { all: unset; flex: none; width: 24px; height: 24px; margin-right: 4px; display: grid; place-items: center; border-radius: 6px; color: var(--faint); cursor: pointer; opacity: 0; }
+.fo-rx svg { width: 12px; height: 12px; }
+.fo-ritem:hover .fo-rx, .fo-rx:focus-visible { opacity: 1; }
+.fo-rx:hover { background: var(--card-3); color: var(--ink); }
+/* the middle: path, filter, folders */
+.fo-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.fo-bar { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 14px 24px 8px; }
+.fo-crumbs { flex: 1 1 260px; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 2px 4px; font-size: .88rem; }
+button.fo-seg { all: unset; padding: 4px 8px; border-radius: 7px; color: var(--muted); cursor: pointer; }
+button.fo-seg:hover { background: var(--card-2); color: var(--ink); }
+button.fo-seg:focus-visible { outline: 2px solid var(--accent-line); }
+.fo-seg.is-last { padding: 4px 8px; font-weight: 700; }
+.fo-sep { color: var(--faint); }
+.fo-filter { flex: 0 1 260px; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--side); color: var(--ink); font: inherit; font-size: .84rem; }
+.fo-filter:focus { outline: 2px solid var(--accent-line); outline-offset: -1px; }
+.fo-hid { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; color: var(--muted); cursor: pointer; }
+.fo-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; }
+.fo-scroll { overflow-y: auto; padding: 8px 24px 28px; }
+.fo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); grid-auto-rows: 68px; gap: 10px; }
+.fo-card { position: relative; display: flex; border: 1px solid var(--line); border-radius: 12px; background: var(--side); }
+.fo-card:hover { border-color: var(--line-2); background: var(--card); }
+.fo-cgo { all: unset; box-sizing: border-box; flex: 1; height: 100%; min-width: 0; display: flex; align-items: center; gap: 11px; padding: 12px 40px 12px 14px; cursor: pointer; border-radius: 12px; }
+.fo-cgo:focus-visible { outline: 2px solid var(--accent-line); outline-offset: -2px; }
+.fo-cgo .fo-cic { flex: none; width: 22px; height: 22px; color: var(--accent); }
+.fo-cmain { display: grid; gap: 2px; min-width: 0; }
+.fo-cname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .88rem; font-weight: 600; }
+.fo-cmeta { display: flex; align-items: center; gap: 8px; font-size: .72rem; color: var(--faint); min-height: 1em; }
+.fo-tag { padding: 0 7px; border-radius: 999px; background: var(--card-3); color: var(--muted); font: 600 .66rem var(--mono); }
+.fo-tag.is-live { background: var(--green-soft); color: var(--green-ink); font-family: inherit; }
+.fo-star { all: unset; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; color: var(--faint); cursor: pointer; opacity: 0; }
+.fo-star svg { width: 15px; height: 15px; }
+.fo-card:hover .fo-star, .fo-star:focus-visible, .fo-star.is-on { opacity: 1; }
+.fo-star.is-on { color: var(--amber); }
+.fo-star.is-on svg { fill: currentColor; }
+.fo-star:hover { background: var(--card-3); }
+.fo-star:focus-visible { outline: 2px solid var(--accent); }
+.fo-empty { margin: 20px 0; font-size: .84rem; color: var(--muted); }
+/* the right: this folder */
+.fo-here { overflow-y: auto; padding: 18px 20px 28px; border-left: 1px solid var(--line); background: var(--side); display: flex; flex-direction: column; gap: 16px; }
+.fo-hhead { position: relative; display: flex; align-items: flex-start; gap: 10px; }
+.fo-hinfo { flex: 1; min-width: 0; }
+.fo-hinfo h3 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+.fo-hpath { margin: 3px 0 0; font: .72rem var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.fo-htags { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font-size: .74rem; color: var(--faint); }
+.fo-hstar { position: static; opacity: 1; flex: none; }
+.fo-here .fo-new { flex: none; justify-content: center; height: 56px; border-radius: 12px; font-size: 1rem; gap: 10px; }
+.fo-here .fo-new svg { width: 20px; height: 20px; }
+.fo-compose { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--card); }
+.fo-compose h4, .fo-chats h4 { margin: 0; font-size: .78rem; font-weight: 700; color: var(--muted); }
+.fo-compose .dr-composer { display: flex; flex-wrap: wrap; align-items: center; padding: 0; border: 0; background: none; }
+.fo-compose .dr-composer-in { flex: 1 1 100%; min-height: 84px; }
+.fo-compose .dr-composer-mic { margin-left: auto; }
+.fo-compose .dr-composer-in + .dr-composer-go { margin-left: auto; }
+.fo-compose .fo-cancel { justify-self: end; }
+.fo-clist { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.fo-chat { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.fo-chat.is-on { border-color: var(--accent-line); }
+.fo-chmain { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.fo-chh { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fo-chtitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .84rem; font-weight: 600; }
+.fo-chmeta { font: .7rem var(--mono); color: var(--faint); }
+@media (max-width: 1100px) { .fo-cols { grid-template-columns: minmax(0, 1fr) 320px; } }
+@media (max-width: 900px) {
+  .fo-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .fo-rail { flex-direction: row; flex-wrap: nowrap; align-items: flex-start; overflow-x: auto; overflow-y: hidden; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .fo-rsec { margin: 0; grid-auto-flow: column; align-items: center; gap: 4px; }
+  .fo-rsec h3, .fo-rempty { display: none; }
+  .fo-ritem { flex: none; }
+  .fo-cols { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  .fo-here { order: -1; border-left: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+  .fo-scroll { overflow: visible; }
+}

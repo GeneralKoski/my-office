@@ -8,6 +8,7 @@ import { TOKEN } from '../net/live.js';
 import { DEMO } from '../demo/demo.js';
 import { buildChat, closeSession } from './session-drawer.js';
 import { renameChat } from './rename.js';
+import { closeFolders } from './folders.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
 let q = '', seq = 0, typeT = 0, items = [], current = null;   // (current: the conversation being read)
@@ -102,6 +103,7 @@ export function closeArchive() {
 }
 function openArchive() {
   if (state.selectedId) closeSession();
+  closeFolders();
   $('archive').hidden = false; document.body.classList.add('is-archive'); $('btn-archive').setAttribute('aria-pressed', 'true');
   $('ar-q').focus({ preventScroll: true });
   load(true);

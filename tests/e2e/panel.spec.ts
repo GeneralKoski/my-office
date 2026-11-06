@@ -43,7 +43,7 @@ test('the panel: who works, who rests, a request to approve, allowed from it', a
 test('the panel: logo, quota card on hover and focus, the Mac meters and a fix', async ({ page }) => {
   const day = 86400e3, soon = Date.now() + 3600e3;
   await page.addInitScript((d) => {
-    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [], perms: [], ai: null, limits: d }) }); }, 0); } close() { /* none */ } }
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [], perms: [], limits: d }) }); }, 0); } close() { /* none */ } }
     (window as unknown as { EventSource: unknown }).EventSource = FakeES;
   }, { windows: [
     { key: 'session', label: '5 h', pct: 9, resetsAt: soon },
@@ -108,7 +108,7 @@ test('the panel: a session’s project on its row, the details on its card', asy
     { id: 's2', name: 'docs-2', title: 'Docs', status: 'rest', dir: '~/code/docs', lastAt: now - 3600e3, doneAt: now - 3600e3, lastReply: 'Docs updated for the new API.' },
   ];
   await page.addInitScript((d) => {
-    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: d, perms: [], ai: null, limits: null }) }); }, 0); } close() { /* none */ } }
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: d, perms: [], limits: null }) }); }, 0); } close() { /* none */ } }
     (window as unknown as { EventSource: unknown }).EventSource = FakeES;
   }, sessions);
   await page.route('**/api/sys', (r) => r.fulfill({ json: {} }));
@@ -144,7 +144,7 @@ test('the panel: a question and a plan answered right in it', async ({ page }) =
     { id: 'p1', kind: 'plan', sess: 's1', name: 'shop-1', plan: '# The plan\n\n- add an index\n- **measure** again\n\n1. first\n2. second\n\nSome `code` here <b>not html</b>.' },
   ];
   await page.addInitScript((d) => {
-    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [d.sess], perms: d.perms, ai: null, limits: null }) }); }, 0); } close() { /* none */ } }
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [d.sess], perms: d.perms, limits: null }) }); }, 0); } close() { /* none */ } }
     (window as unknown as { EventSource: unknown }).EventSource = FakeES;
   }, { sess, perms });
   const bodies: Record<string, unknown>[] = [];
@@ -213,7 +213,7 @@ test('the panel by keyboard: arrows through the sessions, Y / N for a request', 
   const perms = [{ id: 'r1', kind: 'perm', sess: 's1', name: 'shop-1', tool: 'Bash', type: 'bash', label: 'rm -rf build', detail: 'rm -rf build' },
     { id: 'p2', kind: 'perm', sess: 's2', name: 'docs-2', tool: 'Bash', type: 'bash', label: 'npm test', detail: 'npm test' }];
   await page.addInitScript((d) => {
-    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: d.sessions, perms: d.perms, ai: null, limits: null }) }); }, 0); } close() { /* none */ } }
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: d.sessions, perms: d.perms, limits: null }) }); }, 0); } close() { /* none */ } }
     (window as unknown as { EventSource: unknown }).EventSource = FakeES;
   }, { sessions, perms });
   const bodies: { id: string, choice: string }[] = [];

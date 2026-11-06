@@ -37,9 +37,8 @@ test('the last turn undone from the drawer: an edited file back, a new one remov
   await expect(page.locator('#ds-body .undo-done')).toContainText('2 files are back as they were');
   expect(fs.readFileSync(A, 'utf8')).toBe('a before');
   expect(fs.existsSync(B)).toBe(false);
-  // once only: the button is gone; the chat says so
+  // once only: the button is gone
   await expect(page.locator('#ds-actions .btn', { hasText: 'Undo last turn' })).toHaveCount(0, { timeout: 10_000 });
-  expect((await (await request.get('/api/chat')).json()).msgs.some((m: { kind: string, text?: string }) => m.kind === 'sys' && /Undid .* last turn: 2 files/.test(m.text || ''))).toBe(true);
   // Claude told: its conversation carried on with what was put back (tests/e2e/fake-claude.sh stands in for it)
   await page.locator('#ds-body .btn', { hasText: 'Tell Claude' }).click();
   await expect.poll(() => { try { return fs.readFileSync(path.join(HOME_DIR, '.fake-claude.log'), 'utf8'); } catch { return ''; } }, { timeout: 30_000 }).toContain("just undid the previous turn's file changes");

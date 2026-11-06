@@ -9,44 +9,30 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
-import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes, fmtDur as sysDur } from './system.mjs';
 import { createOverlap, EDIT_TOOLS, fileOf, portInUse } from './overlap.mjs';
 import { OS } from './platform/index.mjs';
-import { parseEtime } from './platform/shared.mjs';
 import { redact } from './redact.mjs';
 import { createUndo, EDIT_TOOLS as UNDO_TOOLS } from './undo.mjs';
 import { createVault } from './vault.mjs';
+import { createBrowse } from './browse.mjs';
 import { MAIN, SUB, modelsOf, withModels, hasSplit, withSplit } from './models.mjs';
-import { createCodexAccounts } from './codex-accounts.mjs';
-import { createAntigravityAccounts, makeDb, windowsOf } from './antigravity-accounts.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
-import { buildTimeline } from '../src/shared/timeline.js';
 import { dangerKey } from '../src/shared/danger.js';
 import { holdMs, createBarWatch } from './mac-hold.mjs';
-import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createBg, bgSettings, printSettings } from './bg-sessions.mjs';
 import { steerable, inboundFrom, isSocket, deliver } from './steer.mjs';
 import { createPush } from './push.mjs';
-import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
-import { createClaudeVersion } from './claude-version.mjs';
-import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
-import { createStranded } from './stranded.mjs';
-import { weekSummary } from './wrapped.mjs';
 import { createPrefs } from './prefs.mjs';
 import { createLoopGuard, LOOP_DEFAULTS, LOOP_MIN, LOOP_N } from './loops.mjs';
-import { createTenure, FAREWELL_DAYS, FAREWELL_DEFAULT } from './tenure.mjs';
 import { cacheFromResume, cacheFromStatus, cacheGuess } from '../src/shared/cache-clock.js';
-import { createOtel } from './otel.mjs';
-import { managedEnvs, otelOwner } from './otel-setup.mjs';
 import { pickLang, createT } from '../src/i18n/index.js';
-import { createLiftService } from './lift-service.mjs';
 import { dataDir } from './data-dir.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -69,7 +55,6 @@ const PAGE_FILES = new Set(['/favicon.ico', '/icon.svg', '/apple-icon.png', '/op
 const prefs = createPrefs(DATA_DIR), { tr } = prefs;   // tr('area.key', vars): words in the office's language (src/i18n)
 const num = (n, digits) => createT(prefs.lang()).num(n, digits);   // a number written the office's way (1,000 / 1.000)
 setI18n({ tr, num, lang: prefs.lang });   // the Mac drawer's tips (system.mjs) speak the same language
-const DESKS = 9;
 const FEED_MAX = 80;
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -190,98 +175,49 @@ const sessions = new Map(); // key ('p<pid>' or 's<sessionId>') -> session
 const sidToKey = new Map();
 let feed = [];
 let seq = 0;
-const today = () => new Date().toLocaleDateString('sv-SE');
-let stats = { day: today(), read: 0, edit: 0, cmd: 0, web: 0, prompts: 0, deploy: 0 };
 let dirty = false;
 
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 try {
   const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-  if (saved.stats?.day === stats.day) stats = saved.stats;
   if (Array.isArray(saved.feed)) feed = saved.feed.slice(-FEED_MAX);
   seq = saved.seq || 0;
 } catch { /* first run */ }
 setInterval(() => {
   if (!dirty) return;
   dirty = false;
-  fsp.writeFile(STATE_FILE, JSON.stringify({ stats, feed, seq })).catch(() => {});
+  fsp.writeFile(STATE_FILE, JSON.stringify({ feed, seq })).catch(() => {});
 }, 10_000).unref();
-
-const trophies = createTrophies({ dataDir: DATA_DIR, claudeDir: CLAUDE_DIR, today, deployRe: DEPLOY_RE, tr, num, onChange: (t, earned) => broadcast({ k: 'trophies', t, earned }) });
 
 // Git: the session most recently active in a repository gets its commit / push / CI animation
 const sessionsIn = (root) => [...sessions.values()].filter((s) => s.cwd && git.repoOf(s.cwd)?.root === root).sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
 function gitEvent(r, type, label) {
   const s = sessionsIn(r.root)[0]; if (!s) return;
-  if (type === 'commit') { rollDay(); stats.commit = (stats.commit || 0) + 1; dirty = true; }   // (today's letters in the lobby's post box)
   const e = { id: ++seq, ts: Date.now(), sess: s.id, name: s.name, type, label, repo: r.name, branch: r.branch, url: r.ciUrl || undefined };
-  pushFeed(e); broadcast({ k: 'ev', e, s: pub(s), stats }); chat.onEvent(e);
+  pushFeed(e); broadcast({ k: 'ev', e, s: pub(s) });
 }
 const git = createGit({
   onRepo: (r) => { for (const s of sessionsIn(r.root)) broadcast({ k: 'sess', s: pub(s) }); },
   onCommit: (r, subject) => gitEvent(r, 'commit', clip(redact(oneLine(subject)), 64)),
   onPush: (r) => gitEvent(r, 'push', r.branch),
-  onCi: (r) => { gitEvent(r, r.ci === 'red' ? 'cired' : 'cigreen', r.ciName); ciCard(r); },
+  onCi: (r) => gitEvent(r, r.ci === 'red' ? 'cired' : 'cigreen', r.ciName),
   onRelease: (r, tag) => gitEvent(r, 'release', clip(redact(oneLine(tag)), 40)),   // (four of them off to the photo booth: people/photobooth.js)
 });
 const pollGit = () => git.poll([...sessions.values()].map((s) => s.cwd));
 
-/* ---------- CI fix: a repository's CI gone red. A card in the chat from the session working in it; its button hands
-   Claude the failing run to fix (a note into the conversation while it works, else a message that carries it on, as
-   writing to a conversation does). Phones may use it only when the Mac allows work from phones. ---------- */
-const runIdOf = (url) => /\/actions\/runs\/(\d+)/.exec(url || '')?.[1] || '';
-function ciCard(r) {
-  const red = chat.state.msgs.findLast((m) => m.kind === 'ci' && m.ci?.repo === r.name && m.ci?.branch === r.branch && m.ci?.state === 'red');
-  if (r.ci === 'green') { if (red) chat.setCi(red.id, { state: 'green' }); return; }
-  if (r.ci !== 'red' || !r.ciUrl || chat.state.msgs.some((m) => m.kind === 'ci' && m.ci?.url === r.ciUrl)) return;   // (this run's card is there already: an office started again)
-  const s = sessionsIn(r.root)[0]; if (!s) return;
-  if (red) chat.setCi(red.id, { state: 'over' });   // (an older run of the branch: the new card is the one to act on)
-  chat.ciCard(s.id, { repo: r.name, branch: r.branch, wf: r.ciName, url: r.ciUrl, sess: s.id, sid: s.sid || '', dir: s.cwd, state: 'red', fix: null });
-  pushOut({ title: tr('server.ci.pushTitle', { repo: r.name }), body: tr('server.ci.pushBody', { wf: r.ciName || 'CI', branch: r.branch }), tag: `ci-${r.name}`, url: '/?chat' });
-}
-// the card's CI-fix button: { id } (the card) -> [status, { ok, how: 'note' | 'sent', message }]
-async function ciFix(b, who) {
-  const m = chat.byId(String(b?.id || ''));
-  if (m?.kind !== 'ci') return [404, { ok: false, message: tr('server.ci.gone') }];
-  const c = m.ci;
-  if (c.state !== 'red') return [409, { ok: false, message: tr('server.ci.notRed') }];
-  const text = tr('server.ci.fix', { wf: c.wf || 'CI', branch: c.branch, url: c.url, run: runIdOf(c.url) || c.url });
-  const s = (c.sid && bySid(c.sid)) || [...sessions.values()].find((x) => x.id === c.sess) || null;
-  const busy = !!s?.sid && s.pid && (s.status !== 'rest' || s.busy);
-  const [code, out] = busy ? await steerTo({ sid: s.sid, text }, who) : await giveWork(s?.sid ? { sid: s.sid, text } : { dir: c.dir, text }, who);
-  if (code === 200) chat.setCi(m.id, { fix: busy ? 'note' : 'sent' });
-  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ci fix ${c.repo}@${c.branch} from ${who}: ${code === 200 ? (busy ? 'note' : 'sent') : out?.code || code}\n`).catch(() => {});
-  return [code, code === 200 ? { ok: true, how: busy ? 'note' : 'sent' } : out];
-}
-
-/* ---------- each project's working life (server/tenure.mjs): the farewell after a long quiet, the return ---------- */
-// (a folder's project as the page names it: its repository's folder, else its own)
-const projectOf = async (cwd) => base((cwd && (await git.rootOf(cwd).catch(() => ''))) || cwd);
-const farewellDays = () => { const d = prefs.get('farewellDays'); return d === 0 || FAREWELL_DAYS.includes(d) ? d : FAREWELL_DEFAULT; };
-const liveProjects = () => new Set([...sessions.values()].map((s) => (s.cwd && git.repoOf(s.cwd)?.name) || base(s.cwd)).filter(Boolean));
-const tenureOut = () => ({ ok: true, days: farewellDays(), choices: FAREWELL_DAYS, projects: tenure.list(farewellDays(), liveProjects()) });
-const tenure = createTenure({ dataDir: DATA_DIR, claudeDir: CLAUDE_DIR, nameOf: projectOf, onChange: () => broadcast({ k: 'tenure', ...tenureOut() }) });
 setInterval(() => { if (watching()) pollGit(); }, 20_000).unref();
 setInterval(() => { if (watching()) git.pollCi(); }, 120_000).unref();
 
-function rollDay() { if (stats.day !== today()) stats = { day: today(), read: 0, edit: 0, cmd: 0, web: 0, prompts: 0, deploy: 0, commit: 0 }; }
-
 function newSession(key) {
-  return { id: crypto.randomUUID(), key, sid: null, pid: null, name: '', cwd: '', link: null, desk: freeDesk(), status: 'rest', busy: false,
+  return { id: crypto.randomUUID(), key, sid: null, pid: null, name: '', cwd: '', link: null, status: 'rest', busy: false,
     lastPrompt: '', taskStart: 0, counts: { read: 0, edit: 0, cmd: 0, web: 0 }, subs: {}, last: null, fromFile: false, lastEventAt: 0, createdAt: Date.now() };
 }
-function freeDesk() {
-  const used = new Set([...sessions.values()].map((s) => s.desk));
-  for (let i = 0; i < DESKS; i++) if (!used.has(i)) return i;
-  return -1;
-}
 const pubSub = (x) => ({ id: x.id, type: x.type, desc: x.desc || '', last: x.last || null, startedAt: x.startedAt, endedAt: x.endedAt || null, steps: x.steps || 0, model: x.model || '' });
-const pub = (s) => ({ id: s.id, sid: s.sid || '', pid: s.pid, name: s.name, title: s.title || '', dir: tilde(s.cwd), link: s.link, desk: s.desk, status: s.status, lastPrompt: s.lastPrompt && oneLine(unwrapPaste(s.lastPrompt)),
+const pub = (s) => ({ id: s.id, sid: s.sid || '', pid: s.pid, name: s.name, title: s.title || '', dir: tilde(s.cwd), link: s.link, status: s.status, lastPrompt: s.lastPrompt && oneLine(unwrapPaste(s.lastPrompt)),
   taskStart: s.taskStart, counts: s.counts, subs: Object.values(s.subs).map(pubSub), doneSubs: (s.doneSubs || []).map(pubSub), last: s.last, acct: acctOf(s),
   entry: s.entry || '', moved: s.parked ? { to: acctShown(s.parked.to), at: s.parked.at } : null,
   lastAt: s.lastEventAt || s.createdAt, doneAt: s.doneAt || 0, todos: s.todos || [], lastReply: s.lastReply || '', origin: s.origin || '',
   bg: s.bg ? [...s.bg.values()].slice(0, 6) : [],
-  dayFirst: s.dayFirst || null,
   stuck: s.stuck || null,
   cache: cacheOut(s),
   pins: pinsOf(s.sid).length,
@@ -348,8 +284,8 @@ const bySid = (sid) => sessions.get(sidToKey.get(sid));
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 
 // Background work a session started (a shell with run_in_background, a monitor): PostToolUse reports a started
-// shell's id, and every Stop lists the tasks still running. Idea from cubicle (MIT). While any runs, the session's
-// character keeps working instead of napping.
+// shell's id, and every Stop lists the tasks still running. Idea from cubicle (MIT). While any runs, the session
+// shows as working instead of resting.
 function trackBackground(s, p) {
   const resp = p.tool_response && typeof p.tool_response === 'object' ? p.tool_response : null;
   s.bg ||= new Map();
@@ -397,8 +333,7 @@ async function originOf(s) {
   catch { return ''; } finally { await fh?.close(); }
 }
 
-// Claude Code's own checklist (TodoWrite, or the newer TaskCreate / TaskUpdate), shown under the session's task on the
-// whiteboard. Statuses become todo / doing / done.
+// Claude Code's own checklist (TodoWrite, or the newer TaskCreate / TaskUpdate), shown under the session's task. Statuses become todo / doing / done.
 const TODO_STATUS = { completed: 'done', in_progress: 'doing', pending: 'todo' };
 function trackTodos(s, p) {
   const i = p.tool_input || {}, txt = (v) => clip(redact(oneLine(v)), 80);
@@ -419,41 +354,6 @@ function trackTodos(s, p) {
   }
 }
 
-/* ---------- your own to-do list (sticky notes on the whiteboard) ----------
-   Kept in data/todos.json. Any page that can open the office may add, tick or remove items: they never touch the Mac. */
-const TODO_FILE = path.join(DATA_DIR, 'todos.json'), TODO_MAX = 60;
-let todos = [];
-try { const t = JSON.parse(fs.readFileSync(TODO_FILE, 'utf8')); if (Array.isArray(t)) todos = t.slice(0, TODO_MAX); } catch { /* first run */ }
-function todoOp(b) {
-  const item = todos.find((t) => t.id === String(b.id || ''));
-  const text = clip(oneLine(b.text), 140);
-  switch (b.op) {
-    case 'add':
-      if (!text) return tr('server.todo.empty');
-      if (todos.length >= TODO_MAX) return tr('server.todo.full', { n: TODO_MAX });
-      todos.push({ id: crypto.randomUUID().slice(0, 8), text, done: false, at: Date.now(), doneAt: 0 });
-      break;
-    case 'toggle':
-      if (!item) return tr('server.todo.gone');
-      item.done = typeof b.done === 'boolean' ? b.done : !item.done; item.doneAt = item.done ? Date.now() : 0;
-      break;
-    case 'edit':
-      if (!item) return tr('server.todo.gone');
-      if (!text) return tr('server.todo.empty');
-      item.text = text;
-      break;
-    case 'del':
-      if (!item) return tr('server.todo.gone');
-      todos = todos.filter((t) => t !== item);
-      break;
-    case 'clear': todos = todos.filter((t) => !t.done); break;
-    default: return tr('server.badRequest');
-  }
-  fsp.writeFile(TODO_FILE, JSON.stringify(todos)).catch(() => {});
-  broadcast({ k: 'todos', todos });
-  return null;
-}
-
 /* ---------- SSE ---------- */
 const clients = new Set();
 function send(res, obj) { res.write(`data: ${JSON.stringify(obj)}\n\n`); }
@@ -467,89 +367,9 @@ function broadcast(obj) {
   for (const c of clients) send(c.res, obj);
   backlog.push([++sent, JSON.stringify(obj)]); if (backlog.length > 400) backlog.shift();
   for (const w of waiting) w();
-  if (RECORDED.has(obj.k)) record(obj);
 }
-
-/* ---------- replay log ----------
-   What the office shows is appended to data/replay/YYYY-MM-DD.jsonl, one {t, m} per line: session changes and events as
-   broadcast (already redacted), plus a full snapshot when a file starts and at most every 10 minutes after, so a replay
-   can begin at any minute. Permission prompts are not kept. Files older than 7 days are deleted. */
-const REPLAY_DIR = path.join(DATA_DIR, 'replay');
-const REPLAY_KEEP_DAYS = 7;
-const RECORDED = new Set(['ev', 'sess', 'gone', 'stats']);
-fs.mkdirSync(REPLAY_DIR, { recursive: true });
-let rec = { day: '', out: null, snapAt: 0 };
-const replaySnap = () => ({ k: 'snap', sessions: [...sessions.values()].map(pub), feed: feed.slice(-40), stats });
-function record(m) {
-  const t = Date.now(), day = today();
-  if (day !== rec.day) {
-    rec.out?.end();
-    rec = { day, out: fs.createWriteStream(path.join(REPLAY_DIR, `${day}.jsonl`), { flags: 'a' }), snapAt: 0 };
-    rec.out.on('error', (err) => console.error('replay log', err.message));
-    pruneReplay();
-  }
-  rec.out.write(JSON.stringify({ t, m }) + '\n');
-  // the snapshot goes after the message, so it already contains it
-  if (t - rec.snapAt > 600_000) { rec.snapAt = t; rec.out.write(JSON.stringify({ t, m: replaySnap() }) + '\n'); }
-}
-function pruneReplay() {
-  const cut = new Date(Date.now() - REPLAY_KEEP_DAYS * 86400e3).toLocaleDateString('sv-SE');
-  fsp.readdir(REPLAY_DIR).then((names) => {
-    for (const n of names) if (/^\d{4}-\d{2}-\d{2}\.jsonl$/.test(n) && n.slice(0, 10) < cut) fsp.rm(path.join(REPLAY_DIR, n)).catch(() => {});
-  }).catch(() => {});
-}
-async function replayDays() {
-  const out = [];
-  for (const n of (await fsp.readdir(REPLAY_DIR).catch(() => [])).sort().reverse()) {
-    if (!/^\d{4}-\d{2}-\d{2}\.jsonl$/.test(n)) continue;
-    const st = await fsp.stat(path.join(REPLAY_DIR, n)).catch(() => null);
-    if (st && st.size) out.push({ day: n.slice(0, 10), bytes: st.size });
-  }
-  return out;
-}
-// Lines from the last snapshot at or before `from` up to `to`: the page fast-forwards through the part before `from`.
-async function replayRange(day, from, to, max = 80_000) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { items: [], truncated: false };
-  const file = path.join(REPLAY_DIR, `${day}.jsonl`);
-  let items = [], truncated = false;
-  const rl = (await import('node:readline')).createInterface({ input: fs.createReadStream(file), crlfDelay: Infinity });
-  try {
-    for await (const line of rl) {
-      if (!line) continue;
-      let x; try { x = JSON.parse(line); } catch { continue; }   // the line being written right now
-      if (x.t > to) break;
-      if (x.t <= from && x.m.k === 'snap') items = [];
-      items.push(x);
-      if (items.length >= max) { truncated = true; break; }
-    }
-  } catch { /* no file for that day */ }
-  finally { rl.close(); }
-  return { items, truncated };
-}
-
-/* ---------- the company group chat (src/shared/chat-engine.js; the window: src/office/ui/group-chat*.js) ----------
-   One conversation for every page, kept here (data/chat.json): what the sessions say about their work comes straight
-   from the events below, so it goes on with no page open and a phone sees it too; the office's life is told by the
-   Mac's page (POST /api/chat say); you write from any page. Pages get { k: 'chat', op, m | typing } and { k: 'chatact' }. */
-const CHAT_FILE = path.join(DATA_DIR, 'chat.json');
-let chat = null, chatSaveT = null;
-const STAFF_NAME = { __reception: 'people.staff.receptionist', __hr: 'people.staff.hr', __cleaner: 'people.staff.cleaner', __accountant: 'people.accountant.name', __guard: 'people.guard.name', __director: 'people.director', __courier: 'people.staff.shipper', __claude: 'chat.claudeTag' };   // (__claude: a new conversation's answers, before it has a person)
-chat = createChatEngine({
-  tr, now: () => Date.now(),
-  members: () => [...sessions.values()].map((s) => ({ id: s.id, name: s.title || s.name || 'claude', status: s.status, task: s.lastPrompt ? clip(oneLine(unwrapPaste(s.lastPrompt)), 80) : '', last: s.last, project: path.basename(s.cwd || '') })),
-  staffName: (key) => (STAFF_NAME[key] ? tr(STAFF_NAME[key]) : null),
-  store: {
-    load: () => { try { return JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); } catch { return null; } },
-    save: (d) => { clearTimeout(chatSaveT); chatSaveT = setTimeout(() => { fsp.writeFile(`${CHAT_FILE}.tmp`, JSON.stringify(d)).then(() => fsp.rename(`${CHAT_FILE}.tmp`, CHAT_FILE)).catch(() => {}); }, 800); },
-  },
-  emit: (op, x) => broadcast(op === 'typing' ? { k: 'chat', op, typing: x } : { k: 'chat', op, m: x, pinned: chat?.state.pinned ?? null }),
-  act: (what) => broadcast({ k: 'chatact', what }),
-});
-setInterval(() => chat.clock(), 30_000).unref();
-const chatOut = () => ({ ok: true, msgs: chat.state.msgs, pinned: chat.state.pinned, typing: chat.state.typing });
 
 /* ---------- Giving work (server/tasks.mjs): Claude Code runs started from the office ---------- */
-const taskSids = new Set(), taskQuote = new Map();   // the sessions those runs became (their leaving isn't announced: their result is); your task, quoted in the answer
 // Phone work as Claude Code background sessions (server/bg-sessions.mjs), when switched on on the Mac and this Claude Code
 // has them: their settings call the office back the way the hooks do (curl; the small node script on Windows)
 const bgRun = createBg(), WIN = process.platform === 'win32', fwd = (p) => p.replace(/\\/g, '/'), SEND = `"${fwd(process.execPath)}" "${fwd(path.join(ROOT, 'hooks', 'send.mjs'))}"`;
@@ -560,83 +380,30 @@ const tasks = createTasks({
   env: () => { const e = { ...process.env }; if (nowDir) e.CLAUDE_CONFIG_DIR = nowDir; return e; },   // (the account new sessions start on)
   bg: { ...bgRun, want: bgOn, settings: () => bgSettings({ port: PORT, win: WIN, send: SEND }) },
   printSettings: (t) => printSettings({ port: PORT, task: t.id, win: WIN, send: SEND }),   // (a `-p` run tells where its inbox is: server/steer.mjs)
-  onStep: (t, x) => cardStep(t.id, stepOf(x.name, x.input)),
   onBg: (t, what, detail) => onBgTask(t, what, detail),
   onDone: (t) => {
-    if (t.sid) taskSids.add(t.sid);
-    const card = cards.get(t.id); cards.delete(t.id);
-    if (card) { clearTimeout(card.timer); chat.setWork(card.id, { state: t.stopped ? 'stopped' : t.error && !t.result ? 'fail' : 'done', steps: card.steps, n: card.n, end: Date.now(), perm: null, ask: null }); }
     for (const x of sessions.values()) if (x.viaOffice === t.id) delete x.viaOffice;   // (its events are its own again)
-    const dm = t.from?.chat, folder = path.basename(t.dir);
-    // the answer from whoever you asked (the conversation's person; Claude itself for a new conversation, or if that one has gone)
-    const all = [...sessions.values()], who = (t.from?.id && all.some((x) => x.id === t.from.id) && t.from.id) || (dm ? 'claude' : t.sid && all.find((x) => x.sid === t.sid)?.id);
-    // the pages it changed (its SCREENSHOT lines): named under the answer, then their pictures at a phone's size
-    const { text: said, urls } = shotsIn(t.result);
-    const text = t.stopped && !t.result ? tr('chat.task.stopped') : t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : clip(`${said || tr('chat.task.doneEmpty')}${urls.length ? `\n\n📸 ${tr('chat.task.shots', { pages: urls.map((u) => new URL(u).pathname).join(', ') })}` : ''}`, dm ? 3800 : 560);
-    const quote = taskQuote.get(t.id) || null; taskQuote.delete(t.id);
-    if (dm) { chat.working(t.from.id || 'claude', false); if (t.sid) threads.set(t.from.orig, { sid: t.sid, at: Date.now(), running: false }); else threads.delete(t.from.orig); }   // (no branch made: the next message makes one)
-    if (who) chat.say(who, text, { now: true, long: true, reply: quote, tag: 'claude', react: ['❤️', '👍'], reacts: 2 });
-    else chat.system(`📋 ${folder}: ${clip(oneLine(text), 300)}`);
-    pushOut({ title: `💬 ${t.from?.name || folder}`, body: clip(oneLine(text), 180), tag: `task-${t.id}`, url: '/?chat' });
-    if (who && urls.length) (async () => { for (const u of urls) { const photo = await shoot(u).catch(() => null); if (photo) chat.say(who, '', { photo, now: true }); } })();
+    const folder = path.basename(t.dir);
+    if (t.from?.chat) { if (t.sid) threads.set(t.from.orig, { sid: t.sid, at: Date.now(), running: false }); else threads.delete(t.from.orig); }   // (no branch made: the next message makes one)
+    const text = t.stopped && !t.result ? tr('chat.task.stopped') : t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : t.result || tr('chat.task.doneEmpty');
+    pushOut({ title: `💬 ${t.from?.name || folder}`, body: clip(oneLine(text), 180), tag: `task-${t.id}`, url: '/' });
     if (t.from?.orig && steerLater.has(t.from.orig)) setTimeout(() => sendLater(t.from.orig), 1500);   // (a note that couldn't get in: now, as a message)
   },
 });
 /* ---------- notifications on the phones that said yes (server/push.mjs): Claude's answers, and an approval a run started
    from the office needs while nobody has the office open; none while an office page is looked at ---------- */
-const claudeVersion = createClaudeVersion({ dataDir: DATA_DIR });   // (Claude Code's version on this computer, server/claude-version.mjs)
 const push = createPush({ dataDir: DATA_DIR, log: (l) => fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${l}\n`).catch(() => {}) });
-const QUICK_FILE = path.join(DATA_DIR, 'quick.json');   // the chat's quick commands, once you change them (shared by the Mac and the phones)
 const pushOut = (msg) => { if (push.count() && !officeFocused()) push.notify(msg).catch(() => {}); };
 
-/* Writing to a conversation from the chat: the first message branches it (its whole context, the one open in
+/* Writing to a conversation from the composer: the first message branches it (its whole context, the one open in
    your editor left as it is); what you write next carries on that branch, so it remembers what you said (for 6 hours). */
 const threads = new Map();   // the conversation's own id (or 'dir:' a project) -> { sid: the one carried on, at, running }
-// each run's card in the chat (Claude at work: its steps as they come, then done): task id -> { id, steps, n, at, timer }
-const cards = new Map();
-function cardStep(taskId, step) {
-  const c = cards.get(taskId); if (!c) return;
-  c.steps.push(step); c.n++; if (c.steps.length > 40) c.steps.shift();
-  if (!c.timer) c.timer = setTimeout(() => { c.timer = 0; chat.setWork(c.id, { steps: c.steps, n: c.n }); }, 700);   // (a burst of steps: one update; its state is set where it changes)
-}
-// The command that opens a phone's work, running as a background session, on the Mac (with its account's folder)
-function attachCmd(t) {
-  const bin = findClaude(), cli = !bin || bin.onPath ? 'claude' : tilde(bin.file), dir = t.env?.CLAUDE_CONFIG_DIR;
-  const acct = dir && path.resolve(dir) !== path.resolve(CLAUDE_DIR) ? (WIN ? `$env:CLAUDE_CONFIG_DIR="${dir}"; ` : `CLAUDE_CONFIG_DIR=${tilde(dir)} `) : '';
-  return `${acct}${WIN && bin && !bin.onPath ? `& "${bin.file}"` : cli} attach ${t.job}`;
-}
-// A phone's work as a background session: started (its card says how to open it on the Mac), run as `claude -p` instead
-// (said once, with why), or waiting for you on the Mac (a prompt of its own, not one the office holds)
+// A phone's work as a background session: started, or run as `claude -p` instead (said once, with why)
 function onBgTask(t, what, detail) {
-  const card = cards.get(t.id), folder = path.basename(t.dir);
-  if (what === 'started') { if (card) chat.setWork(card.id, { attach: attachCmd(t) }); fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} task ${t.id} background session ${t.job}${t.copy ? ' (a copy)' : ''}\n`).catch(() => {}); return; }
-  if (what === 'fallback') {
-    fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} task ${t.id} as claude -p (${detail})\n`).catch(() => {});
-    if (detail === 'untrusted') chat.system(tr('chat.task.bgUntrusted', { folder }));
-    else if (detail !== 'old') chat.system(tr('chat.task.bgFailed', { folder }));   // (a Claude Code without them: the switch says so already)
-    return;
-  }
-  if (!card || (card.wait && !card.macWait)) return;   // (one the office holds: its card shows that one)
-  if (what === 'wait') { card.macWait = true; card.wait = tr(`chat.card.waitMac.${/permission/.test(detail || '') ? 'perm' : /input/.test(detail || '') ? 'input' : 'other'}`); chat.setWork(card.id, { state: 'wait', ask: card.wait, perm: null, steps: card.steps, n: card.n }); }
-  else if (what === 'work' && card.macWait) { card.macWait = false; card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); }
+  if (what === 'started') fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} task ${t.id} background session ${t.job}${t.copy ? ' (a copy)' : ''}\n`).catch(() => {});
+  else if (what === 'fallback') fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} task ${t.id} as claude -p (${detail})\n`).catch(() => {});
 }
-// one line for a step on the card: what Claude does (its tool), on what (a file, a command, a search)
-function stepOf(name, i = {}) {
-  const f = (p) => path.basename(String(p || '')), c = (t, n = 70) => clip(redact(oneLine(String(t || ''))), n);
-  switch (name) {
-    case 'Read': return `📖 ${tr('chat.step.read', { f: f(i.file_path) })}`;
-    case 'Edit': case 'MultiEdit': case 'NotebookEdit': return `✏️ ${tr('chat.step.edit', { f: f(i.file_path || i.notebook_path) })}`;
-    case 'Write': return `📝 ${tr('chat.step.write', { f: f(i.file_path) })}`;
-    case 'Bash': return `▶ ${c(i.description || i.command)}`;
-    case 'Grep': case 'Glob': return `🔍 ${c(i.pattern, 50)}`;
-    case 'WebSearch': return `🌐 ${c(i.query, 60)}`;
-    case 'WebFetch': try { return `🌐 ${new URL(i.url).host}`; } catch { return '🌐'; }
-    case 'Task': case 'Agent': return `🤖 ${c(i.description, 60)}`;
-    case 'TodoWrite': return `☑️ ${tr('chat.step.todo')}`;
-    default: return `⚙️ ${c(name, 40)}`;
-  }
-}
-// the run started from the office that a session's events belong to (its card shows them, not the chat's chatter)
+// the run started from the office that a session's events belong to
 function runOf(sid, cwd, now = Date.now()) {
   const list = tasks.list();
   return list.find((t) => t.sid === sid) || list.find((t) => t.from?.sid === sid) || list.find((t) => !t.sid && !t.from?.sid && t.dir === cwd && now - t.at < 30e3) || null;
@@ -661,7 +428,6 @@ async function parkForPhone(s) {
   const r = await sysAction({ action: 'closeIdle', items: [{ target: s.pid, start: proc.start }] }).catch(() => null);
   if (!r?.closed?.length) { delete s.parked; fs.rmSync(pin, { force: true }); return { ok: false, message: tr('server.move.failed') }; }
   s.pid = null;
-  chat.system(tr('chat.task.parked', { name }));
   fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone carries on ${name} (${s.sid})\n`).catch(() => {});
   broadcast({ k: 'sess', s: pub(s) });
   return { ok: true };
@@ -676,51 +442,21 @@ const tasksOut = (local) => ({ ok: true, allowed: local || !!prefs.get('phoneTas
   projects: knownDirs.filter((d) => fs.existsSync(d)).map((d) => ({ dir: tilde(d), name: path.basename(d) })),
   sessions: [...sessions.values()].filter((s) => s.sid && s.cwd).map((s) => ({ id: s.id, sid: s.sid, name: s.title || s.name, dir: tilde(s.cwd), status: s.status, cache: cacheOut(s) })) });
 
-/* ---------- what eats the plan (server/otel.mjs): Claude Code's own telemetry, received at /v1/metrics and /v1/logs
-   ----------
-   A session's folder comes from the hooks while it is open, else from the start of its transcript (one read per
-   session, once a minute at most). */
-function transcriptCwd(sid) {
-  if (!/^[\w-]{8,80}$/.test(sid)) return '';
-  const root = path.join(CLAUDE_DIR, 'projects');
-  let dirs = []; try { dirs = fs.readdirSync(root); } catch { return ''; }
-  for (const d of dirs) {
-    const f = path.join(root, d, `${sid}.jsonl`);
-    if (!fs.existsSync(f)) continue;
-    const buf = Buffer.alloc(65536); let n = 0;
-    try { const fd = fs.openSync(f, 'r'); try { n = fs.readSync(fd, buf, 0, buf.length, 0); } finally { fs.closeSync(fd); } } catch { return ''; }
-    const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(buf.toString('utf8', 0, n));
-    try { return m ? JSON.parse(`"${m[1]}"`) : ''; } catch { return ''; }
-  }
-  return '';
-}
-const otel = createOtel({ dir: path.join(DATA_DIR, 'otel'), cwdOf: (sid) => bySid(sid)?.cwd || transcriptCwd(sid) });
-// The panel's numbers: today or the last 7 days, the 40 sessions that cost most (the rest in one line, so they still add
-// up), and the plan's week as an exchange rate: the % of the weekly limit used so far over what was counted since that
-// week began (≈, whole days), when there is enough of both to mean something.
-function burnOut(range) {
-  const r = otel.report(range === '7d' ? '7d' : 'today');
-  let settings = {}; try { settings = JSON.parse(fs.readFileSync(path.join(CLAUDE_DIR, 'settings.json'), 'utf8')); } catch { /* none */ }
-  const w = (planLimits?.windows || []).find((x) => x.key === 'weekly');
-  let plan = null;
-  if (w && w.pct >= 1 && w.resetsAt > Date.now()) { const usd = otel.usdSince(w.resetsAt - 7 * 86400e3); if (usd >= 0.5) plan = { pct: w.pct, resetsAt: w.resetsAt, perUsd: w.pct / usd, name: planLimits.account?.plan || '' }; }
-  const shown = r.sessions.slice(0, 40), rest = r.sessions.slice(40);
-  const named = (x) => { const s = bySid(x.sid); return { ...x, name: s ? s.title || s.name : '', open: !!s, dir: tilde(x.cwd), cwd: undefined }; };
-  return { ok: true, ...r, sessions: shown.map(named), rest: { n: rest.length, usd: rest.reduce((a, x) => a + x.usd, 0), share: rest.reduce((a, x) => a + x.share, 0) },
-    projects: r.projects.map((p) => ({ ...p, dir: tilde(p.cwd), cwd: undefined })), setup: otelOwner({ settings, managed: managedEnvs() }).state, plan };
-}
-
-/* Giving work to a conversation or a project (from the chat's send box or the giving-work button), from the chat, a phone, or a note kept for when
-   a conversation is done: [status, reply]. who: 'mac', 'phone <ip>' or 'queued', for the log. */
-async function giveWork(b, who) {
+/* Giving work to a conversation or a project (the composer, a phone, or a note kept for when a conversation is done):
+   [status, reply]. who: 'mac', 'phone <ip>' or 'queued', for the log. */
+const isDirSync = (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
+async function giveWork(b, who, mac = false) {
   // who it goes to: a conversation the office knows (carried on itself, the very one), or a project folder (a new
-  // conversation there, or the one you started there); one way for both the chat's send box and the giving-work button
+  // conversation there, or the one you started there); one way for both the composer and the giving-work button
   const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
-  const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && (knownDirs.find((d) => d === want) || stranded.dirOf(want));   // (or a worktree the Mac panel listed, handed over to Claude to finish)
+  // (from this computer's own page: any folder it picked, and a kept conversation no editor has open, carried on where it ran)
+  const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), free = mac && path.isAbsolute(want) && isDirSync(want) ? want : '';
+  const rec = !s && mac && b?.sid && vault ? vault.all().find((x) => x.sid === String(b.sid) && !x.gone && x.cwd && isDirSync(x.cwd)) : null;
+  const pdir = !s && (rec ? rec.cwd : knownDirs.find((d) => d === want) || free);
   if (!s && !pdir) return [400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }];
   const text = String(b?.text || '').trim().slice(0, 4000), images = (Array.isArray(b?.images) ? b.images : []).slice(0, 4).map(String);
   if (!text) return [400, { ok: false, code: 'empty' }];
-  const name = s ? s.title || s.name : path.basename(pdir), key = s ? s.sid : `dir:${pdir}`, th = threads.get(key);
+  const name = s ? s.title || s.name : rec ? rec.title || path.basename(pdir) : path.basename(pdir), key = s ? s.sid : rec ? rec.sid : `dir:${pdir}`, th = threads.get(key);
   if (th?.running) return [409, { ok: false, code: 'busy', message: tr('chat.task.threadBusy', { name }) }];
   let from;
   if (s) {   // the conversation itself: open in the editor and resting, it is closed there first; at work there: not now
@@ -731,23 +467,19 @@ async function giveWork(b, who) {
     if (open && s.jobId) { if (!bgOn() && !(await stopBgSession(s))) return [409, { ok: false, code: 'macOpen', message: tr('server.move.failed') }]; }
     else if (open) { const pk = await parkForPhone(s); if (!pk.ok) return [409, { ok: false, code: 'macOpen', message: pk.message }]; }
     from = { sid: s.sid, fork: false, name, id: s.id, orig: key, chat: true, acct: acctOf(s) || '' };
+  } else if (rec) {
+    from = { sid: rec.sid, fork: false, name, orig: key, chat: true };
   } else {   // a project: a new conversation, or the one you started there (for 6 hours; ＋ asks for a new one)
     const on = th?.sid && !b.fresh && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;
     const live = on && bySid(on);   // (that one opened on the Mac since, `claude attach`, and at work there: it waits)
     if (live?.pid && (live.status !== 'rest' || live.busy)) return [409, { ok: false, code: 'macBusy', message: tr('chat.task.macBusy', { name: live.title || live.name }) }];
     from = { sid: on, fork: false, name, orig: key, chat: true };
   }
-  chat.say('me', `@${name} ${text}`, { now: true, long: true });
-  const mine = chat.state.msgs.at(-1);
-  for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
-  const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null, system: SHOT_ASK, stopAfter: s?.entry === 'claude-vscode' });   // (one from your editor goes back to it alone)
+  const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null, stopAfter: s?.entry === 'claude-vscode' });   // (one from your editor goes back to it alone)
   if (r.ok) {
     threads.set(key, { sid: from.sid, at: Date.now(), running: true });
     if (s) s.viaOffice = r.task.id;
-    const card = chat.workCard(s ? s.id : 'claude', { state: 'work', steps: [], n: 0, at: Date.now(), task: r.task.id });   // (task: its Stop button)
-    if (card) cards.set(r.task.id, { id: card.id, steps: [], n: 0, at: Date.now(), timer: 0 });
-    taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null);
-  } else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
+  }
   fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} message ${who} ${s ? `${s.sid}${from.acct ? ` on ${from.acct}` : ''}` : from.sid ? `carry ${from.sid}` : `new in ${pdir}`} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
   return [r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) }];
 }
@@ -769,28 +501,21 @@ async function steerTo(b, who) {
   if (!t && !(s?.pid && (s.status !== 'rest' || s.busy))) return [409, { ok: false, code: 'notBusy', message: tr('chat.steer.notBusy', { name }) }];
   const inbox = t?.inbox || s?.inbox || null, acct = s && acctOf(s);
   const can = steerable({ inbox, mode: s?.mode || '', inbound: inboundFrom({ configDir: t?.env?.CLAUDE_CONFIG_DIR || (acct ? dirOfSlug(acct) : CLAUDE_DIR), cwd: s?.cwd || t?.dir }), isSocket });
-  chat.say('me', `💬 @${name} ${text}`, { now: true, long: true });
   const now = can.ok && await deliver(inbox, tr('server.steer.note', { text }));
   fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} note ${who} ${t ? `task ${t.id}` : s?.sid || key} ${now ? 'delivered' : `kept (${can.ok ? 'failed' : can.why})`} ${clip(oneLine(text), 100)}\n`).catch(() => {});
-  if (now) {
-    if (t) cardStep(t.id, `💬 ${clip(redact(oneLine(text)), 70)}`);
-    chat.system(tr('chat.steer.sent', { name }));
-    return [200, { ok: true, how: 'now' }];
-  }
+  if (now) return [200, { ok: true, how: 'now' }];
   const why = can.ok ? 'failed' : can.why, k = key || s?.sid;
   if (!k) return [409, { ok: false, code: 'notBusy', message: tr('chat.steer.notBusy', { name }) }];
   const was = steerLater.get(k);
-  steerLater.set(k, { body: k.startsWith('dir:') ? { dir: k.slice(4) } : { sid: k }, text: clip(was ? `${was.text}\n${text}` : text, 4000), name, at: Date.now() });
+  steerLater.set(k, { body: k.startsWith('dir:') ? { dir: k.slice(4) } : { sid: k }, text: clip(was ? `${was.text}\n${text}` : text, 4000), at: Date.now() });
   for (const [x, v] of steerLater) if (steerLater.size > 8 || Date.now() - v.at > 6 * 3600e3) steerLater.delete(x);   // (a few, for a few hours)
-  chat.system(tr('chat.steer.later', { name, why: tr(`chat.steer.why.${why}`) }));
   return [200, { ok: true, how: 'later', why }];
 }
 // a kept note, sent as an ordinary message now that its conversation is done (not if it is busy again: then said so)
 async function sendLater(key) {
   const x = steerLater.get(key); if (!x) return;
   steerLater.delete(key);
-  const [code, out] = await giveWork({ ...x.body, text: x.text }, 'queued').catch(() => [500, {}]);
-  if (code !== 200) chat.system(tr('chat.steer.notSent', { name: x.name, why: out?.message || tr('drawer.unreachable') }));
+  await giveWork({ ...x.body, text: x.text }, 'queued').catch(() => [500, {}]);
 }
 
 /* ---------- the project folders sessions have worked in: where giving work may start a new conversation (a phone
@@ -898,17 +623,15 @@ async function recallTask(s) {
   broadcast({ k: 'sess', s: pub(s) });
 }
 function dropSession(key, s) {
-  if (s.fromFile && !taskSids.has(s.sid) && !s.viaOffice) chat.onLeft(s.title || s.name);
   sessions.delete(key);
   if (s.sid && sidToKey.get(s.sid) === key) sidToKey.delete(s.sid);
   broadcast({ k: 'gone', id: s.id });
 }
 setInterval(() => {
   scanSessions();
-  rollDay();
   const now = Date.now();
   for (const [key, s] of sessions) {
-    // Claude went quiet without a Stop event (e.g. interrupted): let the chibi rest. A long tool run (a build, a test
+    // Claude went quiet without a Stop event (e.g. interrupted): let the session rest. A long tool run (a build, a test
     // suite) is not quiet; a tool still open after 10 minutes probably lost its PostToolUse.
     if (s.status === 'work' && !s.busy && (!s.inTool || now - s.lastEventAt > 600_000) && now - s.lastEventAt > 20_000) { s.status = 'rest'; broadcast({ k: 'sess', s: pub(s) }); }
     // Sessions seen only through hooks (no session file) leave after 10 quiet minutes.
@@ -931,7 +654,7 @@ setInterval(async () => {
       if (s.usage.interrupted !== was && was !== undefined && s.status !== 'rest') {
         s.status = 'rest'; s.inTool = false; s.taskStart = 0;
         const e = { id: ++seq, ts: Date.now(), sess: s.id, name: s.name, type: 'interrupt', label: '' };
-        pushFeed(e); broadcast({ k: 'ev', e, s: pub(s), stats });
+        pushFeed(e); broadcast({ k: 'ev', e, s: pub(s) });
       } else broadcast({ k: 'sess', s: pub(s) });
     }
   } finally { usageBusy = false; }
@@ -939,11 +662,10 @@ setInterval(async () => {
 
 /* ---------- hook events ---------- */
 function pushFeed(e) { feed.push(e); if (feed.length > FEED_MAX) feed = feed.slice(-FEED_MAX); dirty = true; }
-function count(s, tool, sub) {
+function count(s, tool) {
   const k = COUNT_OF[tool];
   if (!k) return;
-  s.counts[k]++; stats[k]++; dirty = true; trophies.bump(k);
-  void sub;
+  s.counts[k]++;
 }
 
 let lastHookAt = 0;
@@ -953,7 +675,6 @@ async function onHook(p) {
   const ev = p.hook_event_name, sid = p.session_id;
   if (!ev || !sid) return;
   const loopSig = loops.onEvent(p);   // (at once, before anything awaited: the next call's check must already know)
-  rollDay();
   let s = bySid(sid);
   if (!s) { await scanSessions(); s = bySid(sid); }
   if (!s) {
@@ -965,9 +686,7 @@ async function onHook(p) {
   }
   const now = Date.now();
   s.lastEventAt = now;
-  { const day = new Date(now).toLocaleDateString('sv'); if (ev !== 'SessionEnd' && s.dayFirst?.day !== day) s.dayFirst = { day, at: now }; }   // (its first sign of life each day: the lobby's attendance terminal)
   if (p.transcript_path) s.transcript = p.transcript_path;
-  if (ev !== 'SessionEnd') projectOf(s.cwd || p.cwd).then((name) => tenure.touch(name, { at: now, turn: ev === 'Stop', cwd: s.cwd || p.cwd })).catch(() => {});   // (its project's working life: server/tenure.mjs)
   if (typeof p.permission_mode === 'string') s.mode = p.permission_mode;   // (one that skips permission prompts holds notes from elsewhere: server/steer.mjs)
   const run = runOf(sid, p.cwd, now); if (run && !s.viaOffice) s.viaOffice = run.id;   // (a run from the office: its card tells it)
   const bgTask = run?.mode === 'bg' ? run : null;   // (a background session: its card's steps and its answer come from here)
@@ -998,9 +717,7 @@ async function onHook(p) {
       s.taskStart = now;
       if (!s.viaOffice) s.saidAt = now;
       undo.prompt(sid, said);   // (a new turn: the files it changes are copied first, for undoing the last turn)   // (written by you, not a run the office started: the Mac panel's "you're talking here")
-      stats.prompts++; dirty = true; trophies.bump('prompts'); trophies.session(s.sid);
       e = mk('prompt', clip(s.lastPrompt, 64));
-      Object.defineProperty(e, 'full', { value: clip(redact(unwrapPaste(String(p.prompt || '').replace(STRIP_TAGS, '')).trim()), 4000), enumerable: false });   // (the chat shows it whole)
       break;
     }
     case 'PreToolUse': {
@@ -1009,7 +726,6 @@ async function onHook(p) {
       if (runner) Object.assign(c, { type: 'test', runner });
       if (!agent) { if (s.status === 'rest' && !s.taskStart) s.taskStart = now; s.status = 'work'; s.inTool = true; s.last = { type: c.type, label: c.label }; }
       else { const x = s.subs[agent]; if (x) { x.last = { type: c.type, label: c.label }; x.steps++; lookModel(s, x, now); } }   // (it may have stopped while the call was being read)
-      if (bgTask && !agent) cardStep(bgTask.id, stepOf(p.tool_name, p.tool_input || {}));
       const img = imageId(c.file);
       e = mk(c.type, c.label, { desc: c.desc, agent, agentType: p.agent_type || null, quiet: !!agent, ...(c.runner ? { runner: c.runner } : {}), ...(img ? { img } : {}) });
       if (agent) toFeed = false;
@@ -1017,13 +733,13 @@ async function onHook(p) {
     }
     case 'PostToolUse': {
       if (!agent) { s.inTool = false; trackTodos(s, p); trackBackground(s, p); }
-      count(s, p.tool_name, agent);
+      count(s, p.tool_name);
       if (EDIT_TOOLS.has(p.tool_name)) overlap.edited(sid, fileOf(p.tool_input, p.cwd || s.cwd));   // (another session about to edit it is told: /hook/loop)
       if (p.tool_name === 'Bash') { const r = p.tool_response; portClash(s, sid, portInUse(typeof r === 'string' ? r : r && typeof r === 'object' ? `${r.stdout || ''}\n${r.stderr || ''}` : '')); }
       if (s.status === 'wait') s.status = 'work';
       if (p.tool_name === 'Bash' && /\bgit\b/.test(String(p.tool_input?.command || ''))) setTimeout(pollGit, 1200);   // a commit or push shows up at once
       const m = p.tool_name === 'Bash' && DEPLOY_RE.exec(String(p.tool_input?.command || ''));
-      if (m) { stats.deploy++; dirty = true; trophies.bump('deploy'); e = mk('deploy', m[1]); }
+      if (m) e = mk('deploy', m[1]);
       const runner = !e && p.tool_name === 'Bash' && testRunner(p.tool_input?.command);
       // (with how many passed: the pickleball court's point, src/office/world/backdrops/street-pickle.js)
       if (runner) { const r = p.tool_response, n = testCounts(typeof r === 'string' ? r : r && typeof r === 'object' ? `${r.stdout || ''}\n${r.stderr || ''}` : ''); e = mk('testok', runner, { agent, quiet: !!agent, ...(n || {}) }); if (agent) toFeed = false; }
@@ -1093,12 +809,11 @@ async function onHook(p) {
   if (loopSig) onLoop(s, loopSig);
   if (e) {
     if (toFeed) pushFeed(e);
-    broadcast({ k: 'ev', e, s: pub(s), stats });
-    if (!s.viaOffice) chat.onEvent(e);
+    broadcast({ k: 'ev', e, s: pub(s) });
   } else if (s.status !== prevStatus) {
-    broadcast({ k: 'sess', s: pub(s), stats });
+    broadcast({ k: 'sess', s: pub(s) });
   } else if (ev === 'PostToolUse') {
-    broadcast({ k: 'stats', stats, s: pub(s), post: agent || 'main' });   // `post`: whose tool finished (timeline)
+    broadcast({ k: 'stats', s: pub(s) });
   }
   after?.();
 }
@@ -1355,9 +1070,6 @@ async function onPermission(p, res, long = false) {
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
   if (ours || (long && prefs.get('phoneApprove'))) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(`${c.label}: ${oneLine(entry.detail)}`, 180), tag: `perm-${id}`, url: '/', urgent: true });
-  { const run = tasks.list().find((t) => t.sid === p.session_id || t.from?.sid === p.session_id), card = run && cards.get(run.id);
-    if (card) { card.wait = clip(`${c.label}: ${oneLine(entry.detail)}`, 120); chat.setWork(card.id, { state: 'wait', ask: card.wait, perm: id, risky: !!dangerKey(entry), steps: card.steps, n: card.n });   // (perm: its Allow / Deny buttons)
-      res.on('close', () => { if (cards.get(run.id) === card) { card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); } }); } }
 }
 
 /* ---------- Pins for Claude: what you pin for a conversation (the session drawer's pins tab), said to Claude
@@ -1383,41 +1095,22 @@ function pinOp(b, s) {
   savePins(); broadcast({ k: 'sess', s: pub(s) });
   return pinsOut(s);
 }
-// a conversation just compacted: its pins, as Claude Code wants them, and a word in the chat
+// a conversation just compacted: its pins, as Claude Code wants them
 async function onStart(p) {
   if (p?.source !== 'compact') return null;
   const list = pinsOf(p.session_id); if (!list.length) return null;
   pins[p.session_id].said = Date.now(); savePins();
-  const s = bySid(p.session_id); if (s) chat.system(tr('chat.pins.said', { name: s.title || s.name, n: list.length }));
   fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} pins said again ${p.session_id} (${list.length})\n`).catch(() => {});
   return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: `${tr('server.pins.context')}\n${list.map((x) => `- ${x.text}`).join('\n')}` } };
 }
 
-/* ---------- Denied commands: a call auto mode refused (the synchronous PermissionDenied hook). A card in the chat
-   says what was refused and why. While an office page has focus, Claude Code waits up to 40 s for "retry" (Claude is told it may try the call again, which goes through auto mode again) or "keep blocked"; with none,
-   or when auto mode gave no verdict (a retry would be ignored), the refusal stands at once and the card keeps it on
-   record, the command ready to copy. Phones answer only when the Mac lets them approve. ---------- */
-const DENY_HOLD_MS = 40_000;
-const deniedHeld = new Map();   // card id -> settle(retry)
-const NO_VERDICT = /^(Auto mode could not evaluate|Classifier unavailable)/i;
-async function onDenied(p, res) {
-  let s = p?.session_id ? bySid(p.session_id) : null; if (p?.session_id && !s) { await scanSessions(); s = bySid(p.session_id); }
-  const reason = clip(oneLine(String(p?.reason || '')), 300), canRetry = !NO_VERDICT.test(reason), hold = !!s && canRetry && officeFocused();
-  const shell = p?.tool_name === 'Bash' || p?.tool_name === 'PowerShell';
+/* ---------- Denied commands: a call auto mode refused (the synchronous PermissionDenied hook): kept in the action log;
+   the refusal stands, Claude Code is not held. ---------- */
+function onDenied(p, res) {
+  const reason = clip(oneLine(String(p?.reason || '')), 300), shell = p?.tool_name === 'Bash' || p?.tool_name === 'PowerShell';
   const cmd = clip(redact(String(shell ? p.tool_input?.command || '' : JSON.stringify(p?.tool_input || {}))), 2000);
-  const m = s ? chat.denyCard(s.id, { sess: s.id, tool: p.tool_name || '', label: loopLabel(p.tool_name, p.tool_input), cmd, shell, reason, retry: canRetry, state: hold ? 'held' : 'kept', until: hold ? Date.now() + DENY_HOLD_MS : 0 }) : null;
-  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} denied ${p?.session_id || '?'} ${clip(oneLine(cmd), 100)} ${reason}${hold ? ' (held)' : ''}\n`).catch(() => {});
-  if (!hold || !m) { res.writeHead(200).end(''); return; }
-  let timer = 0;
-  const settle = (retry) => {
-    if (deniedHeld.get(m.id) !== settle) return;
-    deniedHeld.delete(m.id); clearTimeout(timer);
-    chat.setDeny(m.id, { state: retry ? 'retry' : 'kept', until: 0 });
-    try { res.writeHead(200, { 'Content-Type': 'application/json' }).end(retry ? JSON.stringify({ hookSpecificOutput: { hookEventName: 'PermissionDenied', retry: true } }) : ''); } catch { /* gone */ }
-  };
-  deniedHeld.set(m.id, settle);
-  timer = setTimeout(() => settle(false), DENY_HOLD_MS);
-  res.on('close', () => { if (deniedHeld.get(m.id) === settle) { deniedHeld.delete(m.id); clearTimeout(timer); chat.setDeny(m.id, { state: 'kept', until: 0 }); } });   // (Claude Code gave up waiting)
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} denied ${p?.session_id || '?'} ${clip(oneLine(cmd), 100)} ${reason}\n`).catch(() => {});
+  res.writeHead(200).end('');
 }
 
 /* ---------- Undo of the last turn (server/undo.mjs): the files Claude's file tools changed in a conversation's last
@@ -1435,7 +1128,6 @@ async function undoAct(b, who) {
   if (s.status !== 'rest' || s.busy) return [409, { ok: false, message: tr('server.undo.busy', { name: s.title || s.name }) }];
   const r = await undo.apply(s.sid);
   if (!r.done.length) return [409, { ok: false, message: tr('server.undo.nothing') }];
-  chat.system(tr('chat.undo.done', { name: s.title || s.name, n: r.done.length }));
   broadcast({ k: 'sess', s: pub(s) });
   fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} undo ${s.sid} from ${who}: ${r.done.map((x) => `${x.action} ${x.file}`).join(', ')}\n`).catch(() => {});
   return [200, { ok: true, done: r.done.map((x) => ({ ...x, file: tilde(x.file) })), after: tilde(r.after || '') }];
@@ -1471,13 +1163,8 @@ async function onQuestion(p, res, long = false) {
   res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
-  // a phone's work asking (a background session): its card says so, answered where approvals are; a push if nobody looks
-  const card = lh.task && cards.get(lh.task.id);
-  if (card) {
-    card.wait = clip(`${entry.label}: ${oneLine(entry.detail)}`, 120); chat.setWork(card.id, { state: 'wait', ask: card.wait, perm: null, steps: card.steps, n: card.n });
-    res.on('close', () => { if (cards.get(lh.task.id) === card) { card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); } });
-    if (prefs.get('phoneApprove')) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(oneLine(entry.detail), 180), tag: `perm-${id}`, url: '/', urgent: true });
-  }
+  // a phone's work asking (a background session): answered where approvals are; a push if nobody looks
+  if (lh.task && prefs.get('phoneApprove')) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(oneLine(entry.detail), 180), tag: `perm-${id}`, url: '/', urgent: true });
 }
 // The reply for a question card: `answers` from the page is [{ q, pick: [option indexes], other }].
 function askDecision(p, b) {
@@ -1502,7 +1189,7 @@ function planDecision(p, choice, note) {
    The async hooks and the status line feed it; a synchronous PreToolUse hook (curl, 0.3 s at most, nothing printed
    when the office is down or slow: the call goes ahead) posts each call to /hook/loop, which answers at once. The Nth
    identical failure makes the next identical call denied with a reason Claude reads; the person's name tag goes red,
-   a card in the chat says what repeats (Stop, a hint for Claude), and phones get a notification. The other two signs
+   and phones get a notification. The other two signs
    (compaction after compaction, cost rising with nothing edited) are only shown. Settings → More turns it off. */
 const loopConfig = () => ({ ...LOOP_DEFAULTS, ...(prefs.get('loopGuard') || {}) });
 // the call in a few words, as the card and the reason show it: a command as typed, else the tool and its file
@@ -1510,7 +1197,6 @@ const loopLabel = (name, i = {}) => clip(redact(oneLine(name === 'Bash' || name 
   : `${name}${i.file_path || i.notebook_path ? ` ${base(i.file_path || i.notebook_path)}` : i.url ? ` ${host(i.url)}` : i.pattern || i.query ? ` ${i.pattern || i.query}` : ''}`)), 60);
 const loops = createLoopGuard({ config: loopConfig, labelOf: loopLabel });
 let loopHookAt = 0;   // (the synchronous hook heard from: Settings says to run install again when it never was)
-const loopCards = new Map();   // session id -> its card in the chat (the last 16)
 const loopRun = (s) => (s.viaOffice && tasks.list().find((t) => t.id === s.viaOffice)) || (s.sid && runOf(s.sid, s.cwd)) || null;   // (a run from the office: Stop stops it)
 function loopLine(st, name) {
   const usd = st.usd != null ? `$${st.usd.toFixed(2)}` : '';
@@ -1518,26 +1204,18 @@ function loopLine(st, name) {
 }
 function onLoop(s, sig) {
   if (!s || !sig) return;
-  const card = loopCards.get(s.id), name = s.title || s.name;
-  const setCard = (loop) => { if (card) chat.setLoop(card.id, loop); };
+  const name = s.title || s.name;
   if (sig.type === 'fire') {
-    const st = sig.stuck, run = loopRun(s);
-    if (card && ['on', 'stopping'].includes(chat.byId(card.id)?.loop?.state)) setCard({ state: 'over', why: 'again' });   // (stuck another way: the new card below says how)
+    const st = sig.stuck;
     s.stuck = { kind: st.kind, label: st.label || '', n: st.n || 0, blocked: st.blocked || 0, usd: st.usd ?? null, mins: st.mins || 0, at: st.at };
     broadcast({ k: 'sess', s: pub(s) });
-    const m = chat.loopCard(s.id, { ...s.stuck, state: 'on', hint: sig.hint ? 'got' : null, sess: s.id, task: run?.id || null });
-    if (m) { loopCards.delete(s.id); loopCards.set(s.id, { id: m.id }); if (loopCards.size > 16) loopCards.delete(loopCards.keys().next().value); }
-    pushOut({ title: tr('server.loop.pushTitle', { name }), body: clip(loopLine(s.stuck, name), 180), tag: `loop-${s.id}`, url: '/?chat' });
+    pushOut({ title: tr('server.loop.pushTitle', { name }), body: clip(loopLine(s.stuck, name), 180), tag: `loop-${s.id}`, url: '/' });
     fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} stuck ${st.kind} ${s.sid} ${clip(oneLine(st.label || ''), 80)}${st.blocked ? ' (denied)' : ''}\n`).catch(() => {});
   } else if (sig.type === 'blocked') {
     if (s.stuck) { s.stuck.blocked = sig.stuck.blocked; broadcast({ k: 'sess', s: pub(s) }); }
-    setCard({ blocked: sig.stuck.blocked, ...(sig.hint && { hint: 'got' }) });
   } else if (sig.type === 'clear') {
     s.stuck = null; broadcast({ k: 'sess', s: pub(s) });
-    if (card && chat.byId(card.id)?.loop?.state !== 'stopped') setCard({ state: 'over', why: sig.why, ...(sig.hintLost && { hint: 'lost' }) });
-  } else if (sig.type === 'hint') setCard({ hint: 'got' });
-  else if (sig.type === 'hintLost') setCard({ hint: 'lost' });
-  else if (sig.type === 'stopped') setCard({ state: 'stopped' });
+  }
 }
 // the reply to the synchronous hook: nothing (Claude Code decides as usual), a deny with its reason, your hint, or Stop
 function loopReply(p) {
@@ -1548,22 +1226,21 @@ function loopReply(p) {
   return { out, sig: r.sig };
 }
 /* ---------- Overwrite and port guard (server/overlap.mjs): two sessions on one file, a port another process holds.
-   Told to the session's Claude with its next tool call (the synchronous hook above), and said in the chat. ---------- */
+   Told to the session's Claude with its next tool call (the synchronous hook above). ---------- */
 const overlap = createOverlap();
 const nameOfSid = (sid) => { const x = bySid(sid); return x ? x.title || x.name : String(sid || '').slice(0, 8); };
 // before a call: another session's recent edit of the same file (once per pair and file), a word kept for this session
 function overlapNote(p) {
   if (p.hook_event_name && p.hook_event_name !== 'PreToolUse') return null;
-  const sid = p.session_id; let text = overlap.take(sid), line = null;
+  const sid = p.session_id; let text = overlap.take(sid);
   if (EDIT_TOOLS.has(p.tool_name)) {
     const file = fileOf(p.tool_input, p.cwd || bySid(sid)?.cwd), hit = overlap.before(sid, file);
     if (hit) {
       const other = nameOfSid(hit.other), time = new Date(hit.at).toTimeString().slice(0, 5);
       text = [tr('server.overlap.file', { name: other, time }), text].filter(Boolean).join('\n\n');
-      line = tr('chat.overlap.file', { a: nameOfSid(sid), b: other, file: base(file) });
     }
   }
-  return text || line ? { text, line } : null;
+  return text ? { text } : null;
 }
 // what Claude should know, added to whatever the loop guard answers (a deny's reason, its hint) or on its own
 function withContext(out, text) {
@@ -1573,24 +1250,22 @@ function withContext(out, text) {
   return { ...out, hookSpecificOutput: { ...h, hookEventName: 'PreToolUse', additionalContext: [h?.additionalContext, text].filter(Boolean).join('\n\n') } };
 }
 // a command that couldn't have its port: who holds it (a dev server the Mac panel knows, and the session that started
-// it), said in the chat and to this session's Claude (never to kill another session's server); once per port per window
+// it), said to this session's Claude (never to kill another session's server); once per port per window
 async function portClash(s, sid, port) {
   if (!port || !overlap.portOnce(sid, port)) return;
   const d = (await sysSnapshot().catch(() => null))?.devServers?.find((x) => x.ports.includes(port));
   const holder = !d ? tr('server.overlap.someone') : d.owner?.name ? tr('server.overlap.holderOf', { label: d.label, owner: d.owner.name, up: sysDur(d.up) }) : tr('server.overlap.holder', { label: d.label, up: sysDur(d.up) });
-  chat.system(tr('chat.overlap.port', { name: s.title || s.name, port, holder }));
   overlap.note(sid, tr('server.overlap.port', { port, holder }));
   fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} port ${port} clash ${sid}${d ? ` held by pid ${d.pid}` : ''}\n`).catch(() => {});
 }
 // Stop and a hint from the card (any page that may give work: the Mac, a phone when it is allowed)
 function loopAct(b, mac) {
   const id = String(b?.id || ''), s = [...sessions.values()].find((x) => x.id === id); if (!s?.sid) return { ok: false, message: tr('server.loop.gone') };
-  const card = loopCards.get(s.id);
   if (b.op === 'stop') {
     const run = loopRun(s);
-    if (run) { const ok = tasks.stop(run.id); if (ok && card) chat.setLoop(card.id, { state: 'stopped' }); return { ok, how: 'task' }; }
+    if (run) return { ok: tasks.stop(run.id), how: 'task' };
     if (s.status === 'rest') return { ok: false, code: 'resting', message: tr('server.loop.resting', { name: s.title || s.name }) };
-    loops.stop(s.sid); if (card) chat.setLoop(card.id, { state: 'stopping' });
+    loops.stop(s.sid);
     fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} stuck stop ${s.sid} from ${mac ? 'mac' : 'phone'}\n`).catch(() => {});
     return { ok: true, how: 'next' };
   }
@@ -1599,7 +1274,6 @@ function loopAct(b, mac) {
     // a turn already over can't take it at its next step: the page carries the conversation on instead (POST /api/tasks)
     if (s.status === 'rest') return { ok: false, code: 'resting', sid: s.sid };
     if (!loops.hint(s.sid, oneLine(b.text))) return { ok: false, code: 'empty' };
-    if (card) chat.setLoop(card.id, { hint: 'sent' });
     fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} stuck hint ${s.sid} from ${mac ? 'mac' : 'phone'}\n`).catch(() => {});
     return { ok: true };
   }
@@ -1772,6 +1446,15 @@ const vault = process.env.OFFICE_VAULT === '0' ? null : createVault({ dir: path.
 if (vault) { setTimeout(() => vault.scan().catch(() => {}), 90_000).unref(); setInterval(() => vault.scan().catch(() => {}), 3 * 3600e3).unref(); }
 // what the drawer shows (secrets masked, as everywhere the office shows what was typed)
 const vaultItem = (x) => ({ ...x, title: redact(x.title), first: redact(x.first), cwd: tilde(x.cwd), ...(x.snip && { snip: redact(x.snip) }) });
+// New session (server/browse.mjs): the folders of this computer, with the kept conversations that ran in them
+const browse = createBrowse({ home: os.homedir(), chats: () => (vault ? vault.all() : []), favs: () => (Array.isArray(prefs.get('browseFavs')) ? prefs.get('browseFavs') : []), setFavs: (l) => prefs.set('browseFavs', l.length ? l : undefined) });
+async function browseOut(q) {
+  if (q.has('fresh') && vault) await vault.scan().catch(() => {});   // (the page just opened: a chat made a moment ago is in the recent ones)
+  const r = await browse.list(q.get('path') || '', { hidden: q.has('hidden') });
+  if (!r.ok) return r;
+  const chats = browse.chatsIn(r.path).map((x) => ({ sid: x.sid, title: redact(x.title), first: redact(x.first), end: x.end, n: x.n, gone: x.gone }));
+  return { ...r, recent: await browse.recent(), chats };
+}
 async function vaultOut(q, mac) {
   if (!vault) return { ok: false, off: true };
   if (q.get('sid')) {
@@ -2193,7 +1876,6 @@ async function moveNow(s, to, why) {
   const r = await sysAction({ action: 'closeIdle', items: [{ target: s.pid, start: proc.start }] }).catch(() => null);
   if (!r?.closed?.length) { delete s.parked; fs.rmSync(pin, { force: true }); return { ok: false, message: tr('server.move.failed') }; }
   s.pid = null;
-  chat.onMoved(s.id, acctShown(to));
   fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} move ${name} ${from || 'main'} -> ${to || 'main'} (${why})\n`).catch(() => {});
   broadcast({ k: 'sess', s: pub(s) });
   return { ok: true, name, to: acctShown(to), message: tr('server.move.done', { name, to: acctShown(to) }) };
@@ -2227,140 +1909,22 @@ setInterval(() => {
   for (const f of pinned()) { try { const p = path.join(PIN_DIR, f); if (Date.now() - fs.statSync(p).mtimeMs > PARK_MS) fs.rmSync(p, { force: true }); } catch { /* gone */ } }
 }, 3600e3).unref();
 
-/* ---------- the other AI tools' accounts: Codex and Antigravity IDE (server/codex-accounts.mjs, antigravity-accounts.mjs) ----------
-   Their accounts in the plan card under Claude's: each one's usage, which one is in use, adding one, using another, and
-   switching by itself when the one in use runs out. Codex: its sign-in file (~/.codex/auth.json) swapped, a codex
-   started after that uses the new account (the editor's panel: Reload Window). Antigravity IDE: its state database,
-   written while the IDE is closed. OFFICE_AI_ACCOUNTS=0 turns both off. */
-const AI_OFF = process.env.OFFICE_AI_ACCOUNTS === '0';
-let aiTimer = null;
-const aiSoon = () => { clearTimeout(aiTimer); aiTimer = setTimeout(() => broadcast({ k: 'ai', ai: aiOut() }), 250); };
-const aiName = (a) => (a ? a.label || String(a.email || '').split('@')[0] || a.name || a.id : '');
-const verNum = (f) => (/-(\d+)\.(\d+)\.(\d+)/.exec(f) || [0, 0, 0, 0]).slice(1).reduce((x, n) => x * 100000 + Number(n), 0);
-let codexBin = null;
-// Codex's program: OFFICE_CODEX_BIN, the PATH, else the one inside an editor's Codex extension (the newest)
-function findCodex() {
-  if (codexBin && fs.existsSync(codexBin)) return codexBin;
-  const exe = process.platform === 'win32' ? 'codex.exe' : 'codex', isFile = (f) => { try { return fs.statSync(f).isFile(); } catch { return false; } };
-  if (process.env.OFFICE_CODEX_BIN) return (codexBin = isFile(process.env.OFFICE_CODEX_BIN) ? process.env.OFFICE_CODEX_BIN : null);
-  for (const d of String(process.env.PATH || '').split(path.delimiter)) if (d && isFile(path.join(d, exe))) return (codexBin = path.join(d, exe));
-  const found = [];
-  for (const ide of ['.antigravity-ide', '.antigravity', '.vscode', '.vscode-insiders', '.cursor', '.windsurf', '.kiro', '.trae']) {
-    const base = path.join(os.homedir(), ide, 'extensions');
-    let names = []; try { names = fs.readdirSync(base).filter((e) => /^openai\.chatgpt-/.test(e)); } catch { /* not installed */ }
-    for (const e of names) { try { for (const p of fs.readdirSync(path.join(base, e, 'bin'))) if (isFile(path.join(base, e, 'bin', p, exe))) found.push(path.join(base, e, 'bin', p, exe)); } catch { /* no programs */ } }
-  }
-  return (codexBin = found.sort((a, b) => verNum(b) - verNum(a))[0] || null);
-}
 function openUrl(u) {
   if (!/^https?:\/\//.test(u) || process.env.OFFICE_OPEN_URL === '0') return;   // (0: the tests, which never open a browser)
   const [cmd, args] = process.platform === 'darwin' ? ['open', [u]] : process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', u.replace(/&/g, '^&')]] : ['xdg-open', [u]];
   try { spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true }).unref(); } catch { /* the card has the link */ }
 }
-// the processes' command lines, cheaply (OS.processes() also measures memory: a second of CPU on a Mac)
-async function procArgs() {
-  if (process.platform === 'win32') return [...(await OS.processes()).procs.values()].map((p) => ({ pid: p.pid, start: p.start, args: p.args || '' }));
-  const out = await new Promise((r) => execFile('ps', ['-axo', 'pid=,etime=,args='], { maxBuffer: 32 * 1024 * 1024, timeout: 10_000 }, (err, o) => r(err ? '' : o))), now = Date.now() / 1000;
-  return out.split('\n').map((l) => /^\s*(\d+)\s+(\S+)\s+(.*)$/.exec(l)).filter(Boolean).map((m) => ({ pid: +m[1], start: Math.round(now - parseEtime(m[2])), args: m[3] }));
-}
-const codexPs = async () => (process.env.OFFICE_CODEX_PROCS === '0' ? [] : (await procArgs()).filter((p) => /codex/i.test(p.args)));
-const codex = AI_OFF ? null : createCodexAccounts({
-  dir: path.join(DATA_DIR, 'codex'), seat: () => path.resolve(String(process.env.CODEX_HOME || path.join(os.homedir(), '.codex')).replace(/^~(?=$|[\\/])/, os.homedir())),
-  bin: findCodex, procs: codexPs, openUrl, log: (s) => console.log(s),
-  onChange: (what) => {
-    aiSoon();
-    const sw = what?.switched; if (!sw) return;
-    const o = codex.out(), name = (id) => aiName(o.list.find((a) => a.id === id)), older = o.older.filter((p) => p.where !== 'terminal').map((p) => p.where);
-    chat.system(tr(sw.why === 'auto' ? 'chat.ai.codexAuto' : 'chat.ai.codexUsed', { from: name(sw.from), to: name(sw.to), when: sw.until ? hhmmOf(sw.until) : '' })
-      + (older.length ? ` ${tr('chat.ai.codexReload', { where: [...new Set(older)].join(', ') })}` : ''));
-  },
-});
-// Antigravity IDE: its state database and whether it is open (on a Mac: closed and opened again through `open`/osascript)
-const AG_APP = process.env.OFFICE_AG_APP || 'Antigravity IDE';
-const AG_DOT = '.' + AG_APP.toLowerCase().replace(/\s+/g, '-');   // (its folder of extensions: where its Claude Code sessions run from)
-const agDbFile = () => process.env.OFFICE_AG_DB || path.join(process.platform === 'darwin' ? path.join(os.homedir(), 'Library', 'Application Support') : process.platform === 'win32' ? process.env.APPDATA || '' : path.join(os.homedir(), '.config'), AG_APP, 'User', 'globalStorage', 'state.vscdb');
-const agDb = () => (fs.existsSync(agDbFile()) ? makeDb(agDbFile(), process.env.OFFICE_SQLITE || 'sqlite3') : null);
-async function agRunning() {
-  const exe = AG_APP.toLowerCase().replace(/\s+/g, '-');
-  for (const p of await procArgs()) {
-    const a = p.args;
-    if (a.includes(`/${AG_APP}.app/Contents/MacOS/`) || new RegExp(`(^|[\\\\/])(${exe}|${AG_APP.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.exe)( |$)`, 'i').test(a)) return true;
-  }
-  return false;
-}
-const agMac = process.platform === 'darwin' && process.env.OFFICE_AG_RESTART !== '0';
-// the app in front (lsappinfo: no permission needed), so that a quiet switch leaves it in front
-const frontApp = () => new Promise((r) => execFile('lsappinfo', ['front'], { timeout: 4000 }, (err, asn) => {
-  if (err || !String(asn).trim()) { r(''); return; }
-  execFile('lsappinfo', ['info', '-only', 'name', String(asn).trim()], { timeout: 4000 }, (e, out) => r(e ? '' : (/"LSDisplayName"="([^"]*)"/.exec(String(out)) || [])[1] || ''));
-}));
-let agFront = '';
-async function agQuit({ quiet = false } = {}) {
-  agFront = quiet ? await frontApp() : '';
-  await new Promise((r) => execFile('osascript', ['-e', `tell application ${JSON.stringify(AG_APP)} to quit`], { timeout: 15_000 }, () => r()));
-  for (let i = 0; i < 40; i++) { await new Promise((r) => setTimeout(r, 750)); if (!(await agRunning())) return true; }
-  return false;   // (still open: a "save changes?" question, most likely)
-}
-/* Opened again, with every window it had (the IELTS site, the CRM, the LMS…: one folder each). The IDE brings them
-   back itself as it starts (window.restoreWindows, "all" unless set otherwise), with their tabs, unsaved files and
-   terminals; the office then opens each folder once more with the IDE's own command, which only brings forward a window
-   already open: none is lost even when the IDE starts on its sign-in after an account was taken out. */
-const agCli = () => { const d = `/Applications/${AG_APP}.app/Contents/Resources/app/bin`; try { const f = fs.readdirSync(d).find((x) => !x.endsWith('.cmd')); return f ? path.join(d, f) : null; } catch { return null; } };
-// quiet (switched while you were away): opened behind, and the app that was in front put back in front at the end
-async function agLaunch({ quiet = false } = {}) {
-  let wins = [];
-  try { wins = windowsOf(JSON.parse(fs.readFileSync(path.join(path.dirname(agDbFile()), 'storage.json'), 'utf8'))).filter((p) => fs.existsSync(p)); } catch { /* none kept */ }
-  const back = quiet && agFront && agFront !== AG_APP ? agFront : '';
-  const ok = await new Promise((r) => execFile('open', [...(back ? ['-g'] : []), '-a', AG_APP], { timeout: 15_000 }, (err) => r(!err)));
-  const cli = agCli();
-  if (ok && (back || (cli && wins.length))) {
-    setTimeout(async () => {
-      if (cli) for (const p of wins) await new Promise((r) => execFile(cli, [p], { timeout: 20_000 }, () => r()));
-      if (back) execFile('open', ['-a', back], { timeout: 10_000 }, () => {});
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} antigravity: ${wins.length} windows opened again${back ? `, ${back} back in front` : ''}\n`).catch(() => {});
-    }, 8000).unref();
-  }
-  return ok;
-}
-/* A quiet moment to switch in: no key or mouse touched for OFFICE_AG_AWAY_MIN minutes (10; a locked screen counts, nothing
-   touches it), no Claude session in the IDE at work, and Antigravity's own agent (its language server) not working */
-const AG_AWAY_MIN = Number(process.env.OFFICE_AG_AWAY_MIN) || 10;
 const idleSeconds = () => new Promise((r) => execFile('ioreg', ['-c', 'IOHIDSystem', '-d', '4'], { timeout: 6000, maxBuffer: 8 * 1024 * 1024 }, (err, out) => r(err ? 0 : Number((/"HIDIdleTime" = (\d+)/.exec(String(out)) || [])[1] || 0) / 1e9)));
-const agAgentCpu = () => new Promise((r) => execFile('ps', ['-axo', '%cpu=,args='], { timeout: 6000, maxBuffer: 16 * 1024 * 1024 }, (err, out) => r(err ? 0 : String(out).split('\n').filter((l) => l.includes(`${AG_APP}.app`) && /language_server/.test(l)).reduce((s, l) => s + (parseFloat(l) || 0), 0))));
-async function agAway() {
-  if (process.platform !== 'darwin' || (await idleSeconds()) < AG_AWAY_MIN * 60) return false;
-  if ((await agBusy()) || (await agAgentCpu()) >= 10) return false;
-  return true;
-}
-// the Claude sessions at work in the IDE (closing it would end them)
-async function agBusy() {
-  const rows = (await sysSnapshot().catch(() => null))?.claude || [], pids = new Set(rows.filter((c) => c.editor === AG_DOT).map((c) => c.pid));
-  return [...sessions.values()].filter((s) => pids.has(s.pid) && (s.status !== 'rest' || s.busy)).length;
-}
-const ag = AI_OFF ? null : createAntigravityAccounts({
-  dir: path.join(DATA_DIR, 'antigravity'), db: agDb, app: { name: AG_APP, running: agRunning, ...(agMac && { quit: agQuit, launch: agLaunch }) }, busyIn: agBusy, away: agAway, awayMin: AG_AWAY_MIN, log: (s) => console.log(s),
-  onChange: (what) => {
-    aiSoon();
-    const o = ag.out(), name = (id) => aiName(o.list.find((a) => a.id === id));
-    if (what?.switched) {
-      const sw = what.switched;
-      chat.system(tr({ restarted: 'chat.ai.agRestarted', closed: 'chat.ai.agClosed', away: 'chat.ai.agAway' }[sw.when] || 'chat.ai.agUsed', { from: name(sw.from), to: name(sw.to), app: AG_APP }));
-    } else if (what?.waiting) chat.system(tr('chat.ai.agWaiting', { from: name(what.waiting.from), to: name(what.waiting.to), app: AG_APP }));
-  },
-});
-const hhmmOf = (t) => new Date(t).toLocaleTimeString(prefs.lang() === 'it' ? 'it-IT' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
-function aiOut() { return AI_OFF ? null : { codex: codex.out(), ag: ag.out() }; }
 /* ---------- the Mac's menu bar (menubar/MyOfficeBar.swift, built by `my-office install`) ----------
    What its icon shows, read every 3 seconds: how many sessions wait for you and how many are at work, the tightest limit
-   of each tool's account in use as a level, and each session's state (a notification when one starts waiting or
+   of the account in use as a level, and each session's state (a notification when one starts waiting or
    finishes), with the words in the office's language. The office starts it when it starts, if it was built. */
 function panelOut() {
   barWatch.seen();   // (the menu bar reads this: it is alive, and the Mac's idle time is read for it)
   const now = Date.now(), waitingFor = new Set([...pending.values()].map((p) => p.sess));
   const list = [...sessions.values()].map((s) => ({ id: s.id, name: s.title || s.name, status: s.status === 'wait' || waitingFor.has(s.id) ? 'wait' : s.status === 'work' ? 'work' : 'rest' }));
   const tight = (ws) => Math.max(0, ...(ws || []).filter((w) => !w.resetsAt || w.resetsAt > now).map((w) => w.pct || 0));
-  const ai = aiOut(), cx = ai?.codex?.list?.find((a) => a.id === ai.codex.now), ag2 = ai?.ag?.list?.find((a) => a.id === ai.ag.now);
-  const top = Math.max(tight(limitsOut()?.windows), tight(cx?.windows), ag2?.rows?.[0]?.pct || 0);
+  const top = tight(limitsOut()?.windows);
   const working = list.filter((s) => s.status === 'work').length, waiting = list.filter((s) => s.status === 'wait').length;
   // the requests held now, for the notification banners (a risky command gets no "allow" there: the office asks twice)
   const held = [...pending.values()].map((p) => ({ id: p.id, kind: p.kind || 'perm', sess: p.sess, name: p.name, tool: p.tool, detail: clip(oneLine(p.kind === 'plan' ? p.detail : p.kind === 'ask' ? p.questions?.[0]?.question || '' : `${p.label}: ${p.detail}`), 120), risky: (p.kind || 'perm') === 'perm' && !!dangerKey(p), until: p.until }));
@@ -2372,7 +1936,6 @@ const MENUBAR_APP = path.join(DATA_DIR, 'menubar', 'My Office.app');
 if (process.platform === 'darwin' && process.env.OFFICE_MENUBAR !== '0' && fs.existsSync(MENUBAR_APP)) {
   execFile('pgrep', ['-f', 'My Office.app/Contents/MacOS/MyOfficeBar'], (err) => { if (err) execFile('open', ['-g', MENUBAR_APP, '--args', String(PORT)], () => {}); });
 }
-codex?.start(); ag?.start();
 
 /* ---------- bring a session's own window to the front ----------
    Walk up from the session's claude process to the app that hosts it (the IDE, Terminal, iTerm…) and `open -a` it,
@@ -2399,27 +1962,6 @@ async function openWindow(s) {
   return new Promise((resolve) => execFile('open', args, { timeout: 8000 }, (err) => resolve(err ? { ok: false, message: tr('server.open.failed') } : { ok: true, app: path.basename(app, '.app') })));
 }
 
-/* ---------- Forgotten work: work left in the worktrees of the repositories sessions have worked in (server/stranded.mjs),
-   for the Mac panel; open one, give Claude the rest of it, or remove a worktree with nothing left in it ---------- */
-const within = (child, dir) => !!child && (child === dir || child.startsWith(dir + path.sep));
-const stranded = createStranded({
-  dirs: () => [...[...sessions.values()].map((s) => s.cwd), ...knownDirs],
-  // (a session open in it, or work given from the chat running there: never removed from under them)
-  inUse: (dir) => [...sessions.values()].some((s) => s.pid && within(s.cwd, dir)) || tasks.list().some((t) => within(t.dir, dir)),
-});
-// "Open": the window of a session working in that folder; else the app the latest session runs in (an editor opens the
-// folder, a terminal a window there); else the Finder (the file manager elsewhere)
-async function openFolder(dir) {
-  const open = [...sessions.values()].filter((s) => s.pid).sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
-  const here = open.find((s) => within(s.cwd, dir));
-  if (here && process.platform === 'darwin') { const r = await openWindow(here); if (r.ok) return r; }
-  const done = (cmd, args, app) => new Promise((resolve) => execFile(cmd, args, { timeout: 8000 }, (err) => resolve(err ? { ok: false, message: tr('server.open.failed') } : { ok: true, app })));
-  if (process.platform === 'win32') return done('explorer.exe', [dir], 'Explorer');
-  if (process.platform !== 'darwin') return done('xdg-open', [dir], '');
-  const app = open[0] && await hostApp(open[0].pid);
-  return app ? done('open', ['-a', app, dir], path.basename(app, '.app')) : done('open', [dir], 'Finder');
-}
-
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (req.method === 'POST' && url.pathname === '/event') {
@@ -2433,33 +1975,9 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  // Claude Code's OpenTelemetry export (OTLP/HTTP, JSON only): from this computer's own Claude Code, never a page (no
-  // Origin), never the tunnel or the LAN (isLoopback); 4 MB a request at most, gzip allowed (OTEL_EXPORTER_OTLP_COMPRESSION)
-  if (req.method === 'POST' && (url.pathname === '/v1/metrics' || url.pathname === '/v1/logs')) {
-    if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
-    if (!/^application\/json\b/i.test(String(req.headers['content-type'] || ''))) { req.resume(); res.writeHead(415, { 'Content-Type': 'application/json' }).end('{"error":"OTLP/HTTP JSON only: set OTEL_EXPORTER_OTLP_PROTOCOL=http/json"}'); return; }
-    const MAX = 4_000_000, chunks = []; let size = 0, over = false;
-    // (too big: answered at once and the connection closed, the rest of it never read)
-    const tooBig = () => { over = true; chunks.length = 0; res.writeHead(413, { Connection: 'close' }).end(); };
-    if (Number(req.headers['content-length']) > MAX) { tooBig(); return; }
-    req.on('data', (c) => { if (over) return; size += c.length; if (size > MAX) { tooBig(); req.destroy(); } else chunks.push(c); });
-    req.on('end', () => {
-      if (over) return;
-      let body = null;
-      try {
-        let raw = Buffer.concat(chunks);
-        if (/gzip/i.test(String(req.headers['content-encoding'] || ''))) raw = zlib.gunzipSync(raw, { maxOutputLength: 4 * MAX });
-        body = JSON.parse(raw.toString('utf8'));
-      } catch { res.writeHead(400, { 'Content-Type': 'application/json' }).end('{"error":"not OTLP JSON"}'); return; }
-      const wrong = url.pathname === '/v1/metrics' ? !body?.resourceMetrics : !body?.resourceLogs;
-      if (!wrong) otel.ingest(body);
-      res.writeHead(wrong ? 400 : 200, { 'Content-Type': 'application/json' }).end('{}');   // (an empty ExportMetricsServiceResponse / ExportLogsServiceResponse: all accepted)
-    });
-    return;
-  }
   if (req.method === 'GET' && url.pathname === '/api/doctor') {
     if (!isLoopback(req)) { res.writeHead(403).end(); return; }
-    json(res, 200, { uptime: Math.round((Date.now() - startedAt) / 1000), lastEventAt: lastHookAt, sessions: sessions.size, pending: pending.size, node: process.versions.node, statusAt, limitsAt: planLimits?.at || 0, limitsSource: planLimits?.source || null, usageNote: noteText(), otel: otel.info() });
+    json(res, 200, { uptime: Math.round((Date.now() - startedAt) / 1000), lastEventAt: lastHookAt, sessions: sessions.size, pending: pending.size, node: process.versions.node, statusAt, limitsAt: planLimits?.at || 0, limitsSource: planLimits?.source || null, usageNote: noteText() });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/hook/question') {
@@ -2486,8 +2004,7 @@ const server = http.createServer((req, res) => {
       let r = null, x = null; try { r = p && loopReply(p); x = p && overlapNote(p); } catch (err) { console.error('loop', err); }
       const out = x?.text ? withContext(r?.out, x.text) : r?.out;
       res.writeHead(200, { 'Content-Type': 'application/json' }).end(out ? JSON.stringify(out) : '');
-      if (r?.sig) onLoop(bySid(p.session_id), r.sig);   // (after the answer: Claude Code isn't kept waiting for the chat)
-      if (x?.line) chat.system(x.line);
+      if (r?.sig) onLoop(bySid(p.session_id), r.sig);   // (after the answer: Claude Code isn't kept waiting)
     }).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
@@ -2509,9 +2026,9 @@ const server = http.createServer((req, res) => {
   }
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
-  // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it).
+  // answers to approvals (when the Mac allows them), the page's presence and work (when the Mac allows it).
   // Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/denied', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/push', '/api/loop', '/api/pins', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2608,15 +2125,6 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (url.pathname === '/api/quick' && req.method === 'POST') {   // the quick commands over the chat's input, yours: { list: [{ label, prompt }] }
-    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
-    readJson(req).then((b) => {
-      const list = (Array.isArray(b?.list) ? b.list : []).slice(0, 12).map((q) => ({ label: clip(oneLine(String(q?.label || '')), 24), prompt: String(q?.prompt || '').trim().slice(0, 2000) })).filter((q) => q.label && q.prompt);
-      try { fs.writeFileSync(QUICK_FILE, JSON.stringify(list)); } catch { json(res, 500, { ok: false }); return; }
-      json(res, 200, { ok: true, list });
-    });
-    return;
-  }
   if (url.pathname === '/api/push' && req.method === 'POST') {   // a phone saying yes ({ op: 'add', sub }) or no ({ op: 'remove', endpoint }); { op: 'test', endpoint? }
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     readJson(req).then(async (b) => {
@@ -2656,29 +2164,8 @@ const server = http.createServer((req, res) => {
       if (url.pathname === '/api/tasks/stop') { json(res, 200, { ok: tasks.stop(String(b?.id || '')) }); return; }
       if (url.pathname !== '/api/tasks' && url.pathname !== '/api/tasks/steer') { json(res, 404, { ok: false }); return; }
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
-      const [code, out] = await (url.pathname === '/api/tasks/steer' ? steerTo : giveWork)(b, mac ? 'mac' : `phone ${clientIp(req)}`);
+      const [code, out] = await (url.pathname === '/api/tasks/steer' ? steerTo : giveWork)(b, mac ? 'mac' : `phone ${clientIp(req)}`, mac);
       json(res, code, out);
-    });
-    return;
-  }
-  if (url.pathname === '/api/chat' && req.method === 'POST') {   // the group chat: { op, … } (say and photo only from this computer)
-    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
-    readJson(req, 600_000).then((b) => {
-      const mac = isLoopback(req), op = String(b?.op || ''), str = (x, n) => String(x ?? '').slice(0, n);
-      if (op === 'send') chat.send({ text: str(b.text, 600), sticker: Number.isInteger(b.sticker) ? b.sticker : null, replyTo: str(b.replyTo, 40) || null });
-      else if (op === 'react') chat.react(str(b.id, 40), 'me', str(b.emoji, 8));
-      else if (op === 'vote') chat.vote(str(b.id, 40), 'me', Number(b.i));
-      else if (op === 'rsvp') chat.rsvp(str(b.id, 40), 'me', !!b.yes);
-      else if (op === 'recall') chat.recall(str(b.id, 40));
-      else if (op === 'poll') chat.poll('me', str(b.q, 120), (Array.isArray(b.opts) ? b.opts : []).slice(0, 6).map((x) => str(x, 60)));
-      else if (op === 'photo' && mac && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(String(b.data || '')) && b.data.length < 500_000) chat.photo(b.data);
-      else if (op === 'say' && mac) {
-        const photo = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(String(b.photo || '')) && b.photo.length < 500_000 ? b.photo : null;
-        chat.say(str(b.from, 60), str(b.text, 600), { key: str(b.key, 120) || undefined, sticker: Number.isInteger(b.sticker) ? b.sticker : undefined, photo, pin: !!b.pin, delay: Number.isFinite(b.delay) ? Math.min(60_000, Math.max(0, b.delay)) : undefined,
-          react: (Array.isArray(b.react) ? b.react : []).filter((e) => REACTIONS.includes(e)), reacts: Math.min(6, Number(b.reacts) || 2),
-          answer: (Array.isArray(b.answer) ? b.answer : []).slice(0, 4).map((a) => ({ key: str(a?.key, 30).replace(/[^\w]/g, ''), chance: Math.min(1, Math.max(0, Number(a?.chance ?? 1))) })).filter((a) => a.key) });
-      } else { json(res, 400, { ok: false }); return; }
-      json(res, 200, { ok: true });
     });
     return;
   }
@@ -2784,23 +2271,6 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && (url.pathname === '/api/stranded/open' || url.pathname === '/api/stranded/remove')) {   // (this computer only, from this page)
-    if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.openOnMac') }); return; }
-    readJson(req).then(async (b) => {
-      const w = stranded.entry(b?.id);
-      if (url.pathname === '/api/stranded/open') {
-        const r = w ? await openFolder(w.path) : { ok: false, message: tr('mac.stranded.gone') };
-        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} open folder ${w?.path || '?'} -> ${r.ok ? r.app || 'ok' : r.message}\n`).catch(() => {});
-        json(res, 200, r); return;
-      }
-      const r = await stranded.remove(b?.id);
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} remove worktree ${r.w?.path || '?'} -> ${r.ok ? 'removed' : `${r.code}${r.why ? ` ${r.why}` : ''}`}\n`).catch(() => {});
-      const at = r.w ? tilde(r.w.path) : '';
-      json(res, 200, r.ok ? { ok: true, message: tr(r.w.branch ? 'mac.stranded.removed' : 'mac.stranded.removedDetached', { dir: at, branch: r.w.branch }) }
-        : { ok: false, code: r.code, message: tr(`mac.stranded.refused.${r.code}`, { why: r.why || '' }) });
-    });
-    return;
-  }
   if (req.method === 'POST' && /^\/api\/accounts(\/(code|cancel|login|rename|use|auto|order|move))?$/.test(url.pathname)) {   // (this computer only, from this page)
     const sameOrigin = sameOriginOf(req);
     if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.account.onMac') }); return; }
@@ -2838,62 +2308,6 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && /^\/api\/ai\/(codex|ag)\/(use|add|cancel|remove|rename|auto|order|later|read)$/.test(url.pathname)) {   // (this computer only, from this page)
-    if (AI_OFF || !isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.account.onMac') }); return; }
-    readJson(req).then(async (b) => {
-      const [, tool, op] = /^\/api\/ai\/(\w+)\/(\w+)$/.exec(url.pathname), id = String(b?.id || '').slice(0, 40), label = clip(oneLine(b?.label), 24);
-      let r = { ok: false };
-      if (tool === 'codex') {
-        if (op === 'use') r = await codex.switchTo(id);
-        else if (op === 'add') { const L = codex.addStart(); r = { ok: L?.state === 'waiting', ...L, ...(L?.state === 'failed' && { code: L.note === 'noCli' ? 'noCli' : 'loginFailed' }) }; }
-        else if (op === 'cancel') { codex.addCancel(); r = { ok: true }; }
-        else if (op === 'remove') r = await codex.remove(id);
-        else if (op === 'rename') r = codex.rename(id, label);
-        else if (op === 'auto') r = codex.setAuto(!!b?.on);
-        else if (op === 'order') r = codex.setOrder(b?.order);
-        else if (op === 'read') { await codex.read(id); r = { ok: true }; }
-      } else {
-        if (op === 'use') r = await ag.switchTo(id, { restart: !!b?.restart });
-        else if (op === 'add') r = await ag.add({ restart: !!b?.restart });
-        else if (op === 'cancel') { ag.addCancel(); r = { ok: true }; }
-        else if (op === 'later') r = ag.cancelPending();
-        else if (op === 'remove') r = ag.remove(id);
-        else if (op === 'rename') r = ag.rename(id, label);
-        else if (op === 'auto') r = ag.setAuto(b?.on === undefined ? undefined : !!b.on, b?.away === undefined ? undefined : !!b.away);
-        else if (op === 'order') r = ag.setOrder(b?.order);
-      }
-      json(res, 200, { ...r, ...(r?.code && { message: tr(`server.ai.${r.code}`, { n: r.n || 0, app: AG_APP }) }) });
-    });
-    return;
-  }
-  if (req.method === 'POST' && url.pathname === '/api/tenure') {   // this computer only: { op: 'config', days } (Settings → More), { op: 'farewell' | 'official', name } (the page held it)
-    if (!authorized(req, url) || !sameOriginOf(req) || !isLoopback(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
-    readJson(req).then((b) => {
-      if (b?.op === 'config') {
-        const d = Number(b.days);
-        if (d !== 0 && !FAREWELL_DAYS.includes(d)) { json(res, 400, { ok: false }); return; }
-        prefs.set('farewellDays', d);
-        broadcast({ k: 'tenure', ...tenureOut() }); json(res, 200, tenureOut()); return;
-      }
-      if (b?.op === 'official') { json(res, 200, { ok: tenure.markOfficial(String(b.name || '').slice(0, 200)) }); return; }
-      if (b?.op === 'farewell') { const name = String(b.name || '').slice(0, 200); json(res, 200, { ok: tenure.markFarewell(name, farewellDays(), liveProjects().has(name)) }); return; }
-      json(res, 400, { ok: false });
-    });
-    return;
-  }
-  if (req.method === 'POST' && url.pathname === '/api/denied') {   // a refused call's card: { id, op: 'retry' | 'keep' }
-    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
-    const mac = isLoopback(req);
-    readJson(req).then((b) => {
-      if (!mac && !prefs.get('phoneApprove')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
-      const settle = deniedHeld.get(String(b?.id || ''));
-      if (!settle) { json(res, 409, { ok: false, message: tr('server.deny.over') }); return; }
-      settle(b?.op === 'retry');
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} denied ${b?.op === 'retry' ? 'retry' : 'keep'} from ${mac ? 'mac' : 'phone'}\n`).catch(() => {});
-      json(res, 200, { ok: true });
-    });
-    return;
-  }
   if (req.method === 'POST' && url.pathname === '/api/pins') {   // the session drawer's pins tab: { id (the session), op 'add' | 'del', text | pin }
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
@@ -2908,22 +2322,17 @@ const server = http.createServer((req, res) => {
     readJson(req, 20_000).then((b) => renameChat(b)).then(([code, out]) => json(res, code, out)).catch(() => json(res, 500, { ok: false }));
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/browse/star') {   // a folder starred or not: { path, on }; on this computer only
+    if (!authorized(req, url) || !sameOriginOf(req) || !isLoopback(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    readJson(req, 5_000).then(async (b) => json(res, 200, await browse.star(String(b?.path || ''), !!b?.on))).catch(() => json(res, 500, { ok: false }));
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/undo') {   // undo of the last turn: { id (the session), op?: 'tell', files? }
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
     readJson(req).then(async (b) => {
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
       const [code, out] = await undoAct(b, mac ? 'mac' : `phone ${clientIp(req)}`).catch(() => [500, { ok: false }]);
-      json(res, code, out);
-    });
-    return;
-  }
-  if (req.method === 'POST' && url.pathname === '/api/ci') {   // a red CI's card: { id } -> fix the CI
-    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
-    const mac = isLoopback(req);
-    readJson(req).then(async (b) => {
-      if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
-      const [code, out] = await ciFix(b, mac ? 'mac' : `phone ${clientIp(req)}`).catch(() => [500, { ok: false }]);
       json(res, code, out);
     });
     return;
@@ -2962,15 +2371,6 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && url.pathname === '/api/todos') {
-    const sameOrigin = sameOriginOf(req);
-    if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
-    readJson(req).then((b) => {
-      const err = b ? todoOp(b) : tr('server.badRequest');
-      json(res, err ? 400 : 200, err ? { ok: false, message: err, todos } : { ok: true, todos });
-    });
-    return;
-  }
   // The page's own files (bundles, fonts, the QR library, the icons and share card in app/): public, no token needed.
   // In development also Next's overlay.
   if (url.pathname.startsWith('/_next/') || url.pathname.startsWith('/assets/') || PAGE_FILES.has(url.pathname) || (DEV && url.pathname.startsWith('/__nextjs'))) { nextHandle(req, res); return; }
@@ -2981,12 +2381,8 @@ const server = http.createServer((req, res) => {
     else json(res, 401, { ok: false, message: tr('server.pin.needed') });
     return;
   }
-  if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
   if (url.pathname === '/api/loop') { json(res, 200, loopOut()); return; }
-  if (url.pathname === '/api/tenure') { json(res, 200, tenureOut()); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
-  if (url.pathname === '/api/quick') { let list = null; try { list = JSON.parse(fs.readFileSync(QUICK_FILE, 'utf8')); } catch { /* the page's own until you change them */ } json(res, 200, { ok: true, list }); return; }
-  if (url.pathname === '/api/claude-version') { json(res, 200, { ok: true, ...claudeVersion.get() }); return; }   // (a new one: a character goes to the phone shop for an upgrade, outings.js)
   if (url.pathname === '/api/push') { json(res, 200, { ok: true, key: push.publicKey, count: push.count(), on: push.has(String(url.searchParams.get('endpoint') || '')) }); return; }
   if (url.pathname === '/api/image') {   // (sandboxed and never sniffed: an SVG can't run anything opened on its own)
     const file = images.get(String(url.searchParams.get('id') || '')), type = file && IMG_EXT[path.extname(file).slice(1).toLowerCase()];
@@ -3001,9 +2397,9 @@ const server = http.createServer((req, res) => {
   // everything as it is now, the first message a page gets (the Mac's own addresses and PIN only for the Mac)
   const snapNow = (local) => {
     const lanOn = lanIsOn();
-    return { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, local, todos, limits: limitsOut(), limitsNote: noteText(), ai: aiOut(), trophies: trophies.pub(),
+    return { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, local, limits: limitsOut(), limitsNote: noteText(),
       lan: local && lanOn ? lanUrl() : null, lanBase: local && lanOn ? lanUrl(false) : null, pin: local ? currentPin() : null,
-      ts: local && lanOn ? tsUrl() : null, tsHere: !!tsUrl(), phoneApprove: !!prefs.get('phoneApprove'), phoneTasks: !!prefs.get('phoneTasks'), lanFixed: local && lanFixed, build: BUILD, lift: liftService.pub() };
+      ts: local && lanOn ? tsUrl() : null, phoneApprove: !!prefs.get('phoneApprove'), phoneTasks: !!prefs.get('phoneTasks'), lanFixed: local && lanFixed, build: BUILD };
   };
   if (url.pathname === '/stream') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
@@ -3043,34 +2439,14 @@ const server = http.createServer((req, res) => {
     readLog(s, 120, url.searchParams.get('agent')).then((items) => json(res, 200, { items })).catch(() => json(res, 200, { items: [] }));
     return;
   }
-  if (url.pathname === '/api/timeline') {
-    const to = Math.min(Number(url.searchParams.get('to')) || Date.now(), Date.now()), from = Math.max(Number(url.searchParams.get('from')) || to - 3600e3, to - 2 * 86400e3);
-    const dayOf = (t) => new Date(t).toLocaleDateString('sv-SE');
-    (async () => {
-      let items = [], truncated = false;
-      for (const d of [...new Set([dayOf(from), dayOf(to)])]) { const r = await replayRange(d, from, to, 400_000); items = items.concat(r.items); truncated ||= r.truncated; }
-      json(res, 200, { ...buildTimeline(items, from, to), truncated });
-    })().catch(() => json(res, 200, { from, to, rows: [], totals: { work: 0, wait: 0, turn: 0, prompts: 0 }, truncated: false }));
-    return;
-  }
-  if (url.pathname === '/api/wrapped') {
-    weekSummary({ replayDir: REPLAY_DIR, buildTimeline }).then((d) => json(res, 200, d)).catch((err) => json(res, 500, { error: String(err.message || err) }));
-    return;
-  }
-  if (url.pathname === '/api/replay/days') { replayDays().then((days) => json(res, 200, { days, today: today() })); return; }
-  if (url.pathname === '/api/replay') {
-    const from = Number(url.searchParams.get('from')) || 0, to = Number(url.searchParams.get('to')) || Date.now();
-    replayRange(String(url.searchParams.get('day') || ''), from, to).then((r) => json(res, 200, r)).catch(() => json(res, 200, { items: [], truncated: false }));
-    return;
-  }
-  if (url.pathname === '/api/stranded') {   // the Mac panel's forgotten work list (local: whether opening and removing are offered here)
-    stranded.list({ force: url.searchParams.has('fresh') }).then((r) => json(res, 200, { ...r, local: isLoopback(req) })).catch(() => json(res, 200, { ok: false, items: [] }));
-    return;
-  }
   if (url.pathname === '/api/pins') { json(res, 200, pinsOut([...sessions.values()].find((x) => x.id === String(url.searchParams.get('id') || '')))); return; }
   if (url.pathname === '/api/undo') { undoOut(sessionById(url.searchParams.get('id'))).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // what undoing the last turn would do
+  if (url.pathname === '/api/browse') {   // New session: the folders of this computer (this computer only)
+    if (!isLoopback(req)) { json(res, 403, { ok: false, code: 'local' }); return; }
+    browseOut(url.searchParams).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false }));
+    return;
+  }
   if (url.pathname === '/api/vault') { vaultOut(url.searchParams, isLoopback(req)).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the history vault (server/vault.mjs)
-  if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)
   if (url.pathname === '/api/sys') {
     sysSnapshot({ open: url.searchParams.has('open') }).then((snap) => json(res, 200, { ...snap, claude: claudeRows(snap.claude), auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
     return;
@@ -3095,8 +2471,6 @@ const server = http.createServer((req, res) => {
 const DEV = process.argv.includes('--dev');
 // this build's id: a page from an older one (the office was updated and restarted) loads the new one by itself
 const BUILD = (() => { try { return fs.readFileSync(path.join(ROOT, process.env.OFFICE_DIST_DIR || '.next', 'BUILD_ID'), 'utf8').trim(); } catch { return ''; } })();
-// the lift's servicing for the first minutes after a start, longer on a new build (server/lift-service.mjs: a scene)
-const liftService = createLiftService({ dataDir: DATA_DIR, build: BUILD, version: (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version || ''; } catch { return ''; } })() });
 const nextApp = next({ dev: DEV, dir: ROOT, hostname: HOST, port: PORT, httpServer: server });
 const nextHandle = nextApp.getRequestHandler();
 try { await nextApp.prepare(); }
@@ -3294,7 +2668,7 @@ function stopTunnel() {
   Object.assign(tunnel, { state: 'off', url: '', host: '', error: '', tries: 0, pid: 0 });
 }
 // (the office stopping: cloudflared keeps going for when it comes back; staying awake ends with it, caffeinate -w)
-process.on('exit', () => { try { awakeProc?.kill(); } catch { /* gone */ } otel.saveSync(); });
+process.on('exit', () => { try { awakeProc?.kill(); } catch { /* gone */ } });
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => process.exit(0));
 
 server.listen(PORT, HOST, () => {

@@ -30,10 +30,10 @@ function matches(s) {
   return fold(query).split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
 }
 
-/* ---------- approvals: in the list on the home page, floating over a conversation or the archive ---------- */
+/* ---------- approvals: in the list on the home page, floating over a conversation, the archive or the folders ---------- */
 function placePerms() {
   const stack = $('perm-stack'); if (!stack || !permHost) return;
-  const over = !$('dr-session').hidden || !$('archive').hidden, host = over ? $('app') : permHost;
+  const over = !$('dr-session').hidden || !$('archive').hidden || !$('folders').hidden, host = over ? $('app') : permHost;
   stack.classList.toggle('is-float', over);
   if (stack.parentNode !== host) host.append(stack);
 }
@@ -139,12 +139,12 @@ export function setup() {
   watchHold();
   // the approvals follow the page that is open, and the top bar counts them
   const pages = new MutationObserver(placePerms);
-  for (const id of ['dr-session', 'archive']) pages.observe($(id), { attributes: true, attributeFilter: ['hidden'] });
+  for (const id of ['dr-session', 'archive', 'folders']) pages.observe($(id), { attributes: true, attributeFilter: ['hidden'] });
   new MutationObserver(syncApprovals).observe($('perm-stack'), { childList: true });
-  $('btn-approvals').addEventListener('click', () => { document.querySelector('#dr-session .dr-back')?.click(); $('ar-close')?.click(); });
+  $('btn-approvals').addEventListener('click', () => { document.querySelector('#dr-session .dr-back')?.click(); $('ar-close')?.click(); $('fo-close')?.click(); });
   // "/" finds a session (not while typing somewhere)
   document.addEventListener('keydown', (e) => {
-    if (e.key !== '/' || document.body.classList.contains('is-archive') || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (e.key !== '/' || document.body.classList.contains('is-archive') || document.body.classList.contains('is-folders') || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     e.preventDefault(); $('lite-q')?.focus();
   });
   setInterval(() => { if (document.visibilityState === 'visible') renderLite(); }, 2000);

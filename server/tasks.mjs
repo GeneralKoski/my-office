@@ -3,9 +3,9 @@
 // --fork-session, so the conversation open in your editor is left exactly as it is) or as a new conversation in a
 // project folder the office knows (one a session has worked in: never a path typed on a phone). It runs as `claude -p`
 // on the account the office picked; its tool calls ask for approval through the office's own hooks like any session's,
-// and when it's done what it says goes to the group chat (onDone). Photos are kept in data/task-images for it to read.
+// and when it's done the office is told (onDone). Photos are kept in data/task-images for it to read.
 // With "phone work as background sessions" on (bg.want()), it is a Claude Code background session instead
-// (server/bg-sessions.mjs): the office learns its steps and its answer from its hooks (step(), settle()), sees how it is
+// (server/bg-sessions.mjs): the office learns its answer from its hooks (settle()), sees how it is
 // doing with `claude agents --json`, and you can open it on the Mac with `claude attach <id>`. A Claude Code without
 // them, or a folder it won't start one in, runs it as `claude -p` as before (onBg(task, 'fallback', why)).
 import { spawn } from 'node:child_process';
@@ -16,12 +16,11 @@ import { bgPhase, bgRefusal, parseBackgrounded } from './bg-sessions.mjs';
 const MAX_TEXT = 4000, MAX_IMAGES = 4, MAX_IMAGE = 3_500_000;
 const WATCH_MS = 8000;   // how often background sessions are looked at while one runs (`claude agents`, one per account)
 
-/** claude() -> { file } | null; env() -> the environment to run with; onStart(task), onStep(task, { name, input }) (a tool
-    it uses, as it goes), onDone(task) for the office. bg: { want(), settings(), probe, list, stop, run } (createBg with
-    the office's switch and settings) or null; onBg(task, what, detail): 'started' | 'fallback' (why) | a phase it moved to
-    ('work' | 'wait', what it waits for). printSettings(task): the `--settings` a `-p` run gets (the office told which
+/** claude() -> { file } | null; env() -> the environment to run with; onStart(task), onDone(task) for the office. bg:
+    { want(), settings(), probe, list, stop, run } (createBg with the office's switch and settings) or null;
+    onBg(task, what, detail): 'started' | 'fallback' (why) | a phase it moved to ('work' | 'wait', what it waits for). printSettings(task): the `--settings` a `-p` run gets (the office told which
     session it is and where its inbox is: server/steer.mjs), or nothing. */
-export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onBg, bg = null, printSettings = null, max = 3, perHour = 12, watchMs = WATCH_MS }) {
+export function createTasks({ dataDir, claude, env, onStart, onDone, onBg, bg = null, printSettings = null, max = 3, perHour = 12, watchMs = WATCH_MS }) {
   const running = new Map(), recent = [];   // id -> task; when the last ones started (the hourly cap)
   const binds = new Map();   // a background session's short id -> { sid, inbox }, told before its task knew the short id
   const imgDir = path.join(dataDir, 'task-images');
@@ -72,7 +71,6 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
         try {
           const j = JSON.parse(line);
           if (j.type === 'system' && j.subtype === 'init' && j.session_id) t.sid = j.session_id;
-          if (j.type === 'assistant' && !j.parent_tool_use_id) for (const c of j.message?.content || []) if (c?.type === 'tool_use') onStep?.(t, { name: c.name, input: c.input || {} });
           if (j.type === 'result') { t.result = String(j.result || ''); if (j.is_error) t.error = t.result || j.subtype || 'error'; }
         } catch { /* not a line of its stream */ }
       }
@@ -179,7 +177,7 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
   return { start, stop, bind, settle, list: () => [...running.values()].map(pub),
     /** the running task a session is (or carries on), as it is kept: null when none */
     of: (sid) => (sid && [...running.values()].find((t) => t.sid === sid || t.from?.sid === sid)) || null,
-    /** a running task by its id, or by the conversation it carries on in the office's chat (from.orig) */
+    /** a running task by its id, or by the conversation it carries on in the office (from.orig) */
     get: (id) => running.get(id) || null,
     byKey: (key) => (key && [...running.values()].find((t) => t.from?.orig === key)) || null };
 }

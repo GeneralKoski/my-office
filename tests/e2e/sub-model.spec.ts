@@ -3,11 +3,10 @@ import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import { HOME_DIR } from '../../playwright.config';
 
-// A subagent's model (server/index.mjs subModel, read from its transcript): on its name tag in the office, in the 2D
-// list under its session, and in the session drawer's list of subagents.
+// A subagent's model (server/index.mjs subModel, read from its transcript): in the session page's Subagents tab.
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => { try { localStorage.setItem('office-tips', 'seen'); localStorage.setItem('office-lite', 'on'); } catch { /* private mode */ } }); });
 
-test('a session on Opus sends out an Explore subagent that runs on Sonnet: "Sonnet" by its name', async ({ page, request }) => {
+test('a session on Opus sends out an Explore subagent that runs on Sonnet: "Sonnet" on its card', async ({ page, request }) => {
   test.setTimeout(150_000);
   const sid = 'submodel-a1b2', aid = 'a3f0c9e2b7d14e5f6';
   const transcript = path.join(HOME_DIR, 'submodel', `${sid}.jsonl`), sub = path.join(HOME_DIR, 'submodel', sid, 'subagents', `agent-${aid}.jsonl`);
@@ -20,10 +19,8 @@ test('a session on Opus sends out an Explore subagent that runs on Sonnet: "Sonn
   await request.post('/event', { data: { ...base, hook_event_name: 'SubagentStart', agent_id: aid, agent_type: 'Explore' } });
   await request.post('/event', { data: { ...base, hook_event_name: 'PreToolUse', agent_id: aid, agent_type: 'Explore', tool_name: 'Read', tool_input: { file_path: path.join(HOME_DIR, 'submodel', 'cart.ts') } } });
   await page.goto('/');
-  await expect(page.locator('.v2-sub-model', { hasText: 'Sonnet' })).toBeVisible({ timeout: 30_000 });
-  // (opened in 2D the office has no 3D people yet: the name tag comes with them, once 3D is asked for)
-  await expect(page.locator('.tag-model')).toHaveCount(0);
-  await page.click('.tb-view [data-view="3d"]');
-  await expect(page.locator('.tag-model', { hasText: 'Sonnet' })).toHaveCount(1, { timeout: 60_000 });
+  await page.locator('#lite .v2-row', { hasText: 'submodel' }).click({ timeout: 60_000 });
+  await page.locator('#tab-subs').click();
+  await expect(page.locator('.sub-card', { hasText: 'Explore' }).locator('small')).toContainText('Sonnet', { timeout: 30_000 });
   await request.post('/event', { data: { ...base, hook_event_name: 'SessionEnd', reason: 'other' } });   // (the next test's office has only its own)
 });

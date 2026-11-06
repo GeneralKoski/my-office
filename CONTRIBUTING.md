@@ -70,7 +70,7 @@ To add a language:
 
 1. Copy `src/i18n/locales/en/` to `src/i18n/locales/<code>/` and translate the values (keep the keys).
 2. Add it to `LANGS` in `src/i18n/index.js` with its own name and a locale for numbers and dates (`'de-DE'`).
-3. Open `http://localhost:4310/?lang=<code>` to check it, including the demo (`&demo`) and the Wrapped card.
+3. Open `http://localhost:4310/?lang=<code>` to check it, including the demo (`&demo`).
 
 A key you leave out shows in English, so a partial translation is fine to send.
 

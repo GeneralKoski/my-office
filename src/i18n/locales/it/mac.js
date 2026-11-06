@@ -64,15 +64,4 @@ export default {
     sessions: 'Sessioni Claude',
     dev: 'Server di sviluppo',
   },
-  stranded: {
-    removed: 'Eliminata {dir}. Il branch {branch} è ancora nel repository.',
-    removedDetached: 'Eliminata {dir}.',
-    gone: 'Quella cartella non è più nell\'elenco.',
-    refused: {
-      gone: 'Non eliminata: quella cartella non è più una worktree del repository.',
-      notClean: 'Non eliminata: dentro c\'è qualcosa di nuovo (non committato o non pushato).',
-      inUse: 'Non eliminata: una sessione Claude sta lavorando in quella cartella.',
-      failed: 'Git non l\'ha eliminata: {why}',
-    },
-  },
 };

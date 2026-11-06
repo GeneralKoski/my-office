@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 // Phone work as Claude Code background sessions (server/bg-sessions.mjs), with tests/e2e/fake-claude.sh standing in for
 // `claude --bg`, `claude agents --json` and `claude stop`, and for the hooks a background session fires. On an office of
@@ -25,13 +25,9 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(() => { try { loc
 
 const asked = () => { try { return fs.readFileSync(path.join(HOME, '.fake-claude.log'), 'utf8').trim().split('\n'); } catch { return []; } };
 const hooks = () => { try { return fs.readdirSync(path.join(HOME, '.fake-bg')).filter((f) => f.endsWith('.hooks')).map((f) => fs.readFileSync(path.join(HOME, '.fake-bg', f), 'utf8')).join(''); } catch { return ''; } };
-async function openChat(page: Page) {
-  await page.goto(`${BASE}/`);
-  await expect(async () => { if (!(await page.locator('#zchat').isVisible())) await page.click('#btn-chat'); await expect(page.locator('#zchat')).toBeVisible({ timeout: 2000 }); }).toPass({ timeout: 120_000 });
-  return page.locator('#zchat');
-}
+const bgRows = () => { try { return fs.readdirSync(path.join(HOME, '.fake-bg')).filter((f) => f.endsWith('.json')).map((f) => fs.readFileSync(path.join(HOME, '.fake-bg', f), 'utf8')).join(''); } catch { return ''; } };
 
-test('phone work as a background session: its steps, an approval that waits past the usual window, the answer, attach, carry on, stop, and the old way when it can\'t', async ({ page, request }) => {
+test('phone work as a background session: the switch in Settings, its approval that waits past the usual window, attach, carry on, stop, and the old way when it can\'t', async ({ page, request }) => {
   test.setTimeout(240_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -42,71 +38,56 @@ test('phone work as a background session: its steps, an approval that waits past
   // switched on, on the Mac: this Claude Code has them (its --help and --version)
   const on = await (await request.post(`${BASE}/api/tasks/bg`, { data: { on: true } })).json();
   expect(on.bg).toEqual({ on: true, ok: true, version: '2.1.316' });
-  // the phone window offers it under "give work from a phone", on
+  // the phone window (Settings) offers it under "give work from a phone", on
   await request.post(`${BASE}/api/tasks/allow`, { data: { on: true } });
   await page.goto(`${BASE}/`);
-  await page.click('#btn-phone-top');
+  await page.click('#btn-look');
+  await page.click('#st-tab-more');
+  await page.click('#btn-phone');
   const sw = page.locator('#pm-body .pm-toggle', { hasText: 'Run phone work as background sessions' });
   await expect(sw.locator('input')).toBeChecked({ timeout: 30_000 });
   await expect(sw).toContainText('2.1.257');
-  const zc = await openChat(page);
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await expect(page.locator('#phone-modal')).toBeHidden();
 
   // work given (as a phone would, through /api/tasks): a background session, with the office's settings
   expect((await request.post(`${BASE}/api/tasks`, { data: { dir, text: 'tidy the docs, it needs approval' } })).ok()).toBe(true);
-  const card = zc.locator('.zc-work').last();
-  await expect(card.locator('.zc-work-attach code')).toContainText(/ attach [0-9a-f]{8}$/, { timeout: 30_000 });
-  await expect(card.locator('.zc-work-attach')).toContainText('Back on the Mac, type');
-  const first = asked().find((l) => l.includes('tidy the docs')) || '';
-  expect(first).toMatch(/^--bg --settings \{.*"bgIsolation":"none".*\/hook\/permission\?long=1.* --append-system-prompt .* -- tidy the docs, it needs approval$/);
-  // its steps come from its hooks
-  await expect(card.locator('.zc-work-steps')).toContainText('README.md', { timeout: 20_000 });
-  // an approval: its usual hook answered at once (empty), its own one held, with the card's buttons
-  const allow = card.locator('.zc-work-btn.is-ok');
-  await expect(allow).toBeVisible({ timeout: 20_000 });
+  const first = () => asked().find((l) => l.includes('tidy the docs')) || '';
+  await expect.poll(first, { timeout: 30_000 }).toMatch(/^--bg --settings \{.*"bgIsolation":"none".*\/hook\/permission\?long=1.* -- tidy the docs, it needs approval$/);
+  // an approval: its usual hook answered at once (empty), its own one held, as a card at the top of the list
+  const card = page.locator('#perm-stack .perm-card').first();
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#btn-approvals')).toBeVisible();
   await expect.poll(hooks, { timeout: 20_000 }).toContain('short=[]');
-  await expect(page.locator('#perm-stack .perm-card .pc-left').first()).toHaveText('waiting');
+  await expect(card.locator('.pc-left')).toHaveText('waiting');
   // past the window an approval has otherwise (4 s here, 45 s for real): still there, nothing answered for it
   await page.waitForTimeout(7000);
-  await expect(allow).toBeVisible();
+  await expect(card).toBeVisible();
   expect(hooks()).not.toContain('long=');
-  await allow.click();
-  await expect(zc.locator('.zc-row', { hasText: 'Done in the background: allowed.' })).toBeVisible({ timeout: 30_000 });
-  await expect(card).toHaveClass(/is-done/, { timeout: 20_000 });
-  await expect(card.locator('.zc-work-attach code')).toBeVisible();   // (how to carry on at the Mac stays on the card)
-  expect(hooks()).toContain('"behavior":"allow"');
+  await card.locator('.pc-allow').click();
+  await expect(card).toHaveCount(0);
+  await expect.poll(hooks, { timeout: 30_000 }).toContain('"behavior":"allow"');
+  await expect.poll(async () => (await (await request.get(`${BASE}/api/tasks`)).json()).running.length, { timeout: 30_000 }).toBe(0);
 
   // carrying on that conversation: woken in the background with the options it keeps (no --settings again)
   expect((await request.post(`${BASE}/api/tasks`, { data: { dir, text: 'and the tests too' } })).ok()).toBe(true);
   await expect.poll(() => asked().at(-1), { timeout: 20_000 }).toMatch(/^--bg --resume e2e-bg-[0-9a-f]{8} -- and the tests too$/);
-  await expect(zc.locator('.zc-row', { hasText: 'Done in the background.' }).last()).toBeVisible({ timeout: 30_000 });
+  await expect.poll(async () => (await (await request.get(`${BASE}/api/tasks`)).json()).running.length, { timeout: 30_000 }).toBe(0);
 
-  // stopped from its card: `claude stop`, the card says stopped
-  await expect.poll(async () => (await (await request.get(`${BASE}/api/tasks`)).json()).running.length, { timeout: 20_000 }).toBe(0);
-  expect((await request.post(`${BASE}/api/tasks`, { data: { dir, text: 'take it slowly' } })).ok()).toBe(true);
-  const slow = zc.locator('.zc-work').last();
-  await expect(slow.locator('.zc-work-attach code')).toBeVisible({ timeout: 30_000 });
-  await slow.locator('.zc-work-btn.is-stop').click();
-  await expect(slow).toHaveClass(/is-stopped/, { timeout: 20_000 });
-  await expect.poll(() => fs.readdirSync(path.join(HOME, '.fake-bg')).filter((f) => f.endsWith('.json')).map((f) => fs.readFileSync(path.join(HOME, '.fake-bg', f), 'utf8')).join(''), { timeout: 20_000 }).toContain('"state":"stopped"');
+  // stopped: `claude stop`
+  const slow = await (await request.post(`${BASE}/api/tasks`, { data: { dir, text: 'take it slowly' } })).json();
+  expect(slow.ok).toBe(true);
+  await expect.poll(() => asked().at(-1), { timeout: 20_000 }).toMatch(/^--bg .* -- take it slowly$/);
+  await expect.poll(async () => (await (await request.get(`${BASE}/api/tasks`)).json()).running[0]?.job || '', { timeout: 30_000 }).not.toBe('');
+  expect((await (await request.post(`${BASE}/api/tasks/stop`, { data: { id: slow.task.id } })).json()).ok).toBe(true);
+  await expect.poll(bgRows, { timeout: 20_000 }).toContain('"state":"stopped"');
 
-  // a folder Claude Code won't open one in: the old way (`claude -p`), and why, in the group
+  // a folder Claude Code won't open one in: the old way (`claude -p`)
   expect((await request.post(`${BASE}/api/tasks`, { data: { dir, text: 'an untrusted one', fresh: true } })).ok()).toBe(true);
-  await expect(zc.locator('.zc-sys', { hasText: 'doesn’t trust this folder' })).toBeVisible({ timeout: 30_000 });
-  await expect.poll(() => asked().at(-1), { timeout: 20_000 }).toMatch(/^-p an untrusted one /);
-  await expect(zc.locator('.zc-row', { hasText: 'Done: the e2e task.' }).last()).toBeVisible({ timeout: 30_000 });
-
-  // on a phone (its width, its Chat tab): the card's command wraps inside it
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${BASE}/`);
-  await page.locator('.ph-tabs .ph-tab').nth(4).click();
-  const onPhone = page.locator('#zchat .zc-work', { has: page.locator('.zc-work-attach') }).first();
-  // (the chat is drawn again once its history is in, which can swap the card under the scroll: try again then)
-  await expect(async () => { await onPhone.scrollIntoViewIfNeeded({ timeout: 5000 }); }).toPass({ timeout: 30_000 });
-  await expect(onPhone.locator('.zc-work-attach code')).toBeVisible({ timeout: 30_000 });
-  await page.screenshot({ path: path.join(OUT, 'card-phone.png') });
-  expect(await onPhone.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await expect.poll(() => asked().at(-1), { timeout: 30_000 }).toMatch(/^-p an untrusted one /);
   // switched off: the old way again
   await request.post(`${BASE}/api/tasks/bg`, { data: { on: false } });
+  await expect.poll(async () => (await (await request.get(`${BASE}/api/tasks`)).json()).running.length, { timeout: 30_000 }).toBe(0);
   expect((await request.post(`${BASE}/api/tasks`, { data: { dir, text: 'the old way', fresh: true } })).ok()).toBe(true);
   await expect.poll(() => asked().at(-1), { timeout: 20_000 }).toMatch(/^-p the old way /);
   expect(errors).toEqual([]);

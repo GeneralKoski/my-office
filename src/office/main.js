@@ -7,6 +7,7 @@ import * as uiActivity from './ui/activity.js';
 import * as uiSessionDrawer from './ui/session-drawer.js';
 import * as uiComposer from './ui/composer.js';
 import * as uiArchive from './ui/archive.js';
+import * as uiFolders from './ui/folders.js';
 import * as uiPlan from './ui/plan.js';
 import * as uiTopbar from './ui/topbar.js';
 import * as uiSettings from './ui/settings.js';
@@ -31,6 +32,7 @@ const MODULES = [
   uiSessionDrawer,
   uiComposer,
   uiArchive,
+  uiFolders,
   uiPlan,
   uiTopbar,
   uiSettings,

@@ -130,6 +130,7 @@ export function createVault({ dir, claudeDirs, now = Date.now, log = () => {} })
     await save();
     return true;
   }
+  const all = () => [...index.values()].map(pub);
   const stats = () => { let gone = 0, bytes = 0; for (const e of index.values()) { if (e.gone) gone++; bytes += e.bytes || 0; } return { n: index.size, gone, bytes, at: scannedAt }; };
-  return { scan, search, get, stats, rename };
+  return { scan, search, get, stats, rename, all };
 }

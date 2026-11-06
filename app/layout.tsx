@@ -12,6 +12,7 @@ import '@/styles/permissions.css';
 import '@/styles/stage.css';
 import '@/styles/lite.css';
 import '@/styles/archive.css';
+import '@/styles/folders.css';
 import '@/styles/drawers.css';
 import '@/styles/chat.css';
 import '@/styles/modal.css';

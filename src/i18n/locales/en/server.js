@@ -32,21 +32,6 @@ export default {
     failed: "Couldn't write Claude Code's settings.",
     splitNote: '## Big tasks: hand parts to subagents\nWhen a task has several independent parts (reading or researching in many places, edits that don\'t touch each other), give each part to a subagent with the Agent tool, and run the independent ones in parallel. This session coordinates: it splits the work, writes each subagent a brief with the context it needs, puts the results together and checks them before saying it is done. Small tasks, or ones that need one unbroken line of context, it does itself.',
   },
-  ai: {
-    noAccount: 'That account is no longer in the list.',
-    noCopy: "The office has no saved sign-in for that account. Add it again.",
-    seatFailed: "Couldn't write Codex's sign-in file.",
-    inSeat: "That's the account in use. Switch to another one first.",
-    noCli: "Couldn't find Codex on this computer (the codex program, or an editor's Codex extension).",
-    loginFailed: "Couldn't start Codex's sign-in.",
-    noToken: 'The office has no saved sign-in for that account.',
-    writeFailed: "Couldn't write {app}'s settings.",
-    busy: { one: '{n} Claude session in {app} is still working. Wait for it to finish, or close {app} yourself.', other: '{n} Claude sessions in {app} are still working. Wait for them to finish, or close {app} yourself.' },
-    quitFailed: "{app} didn't close (it may be asking to save a file). Close it yourself and the switch happens straight away.",
-    needsRestart: '{app} is open: it has to be closed and opened again.',
-    noRestart: 'The office can only close and reopen {app} on a Mac. Close it yourself and the switch happens straight away.',
-    noDb: "Couldn't read {app}'s settings (is {app} installed, and the sqlite3 program?).",
-  },
   forbidden: 'Not allowed.',
   badRequest: 'Invalid request.',
   // a name for a command that has no description, from its first words: "Run tests · npm run test"
@@ -92,11 +77,6 @@ export default {
     subReport: 'A subagent sent a report back',
     interrupted: 'You stopped Claude',
   },
-  todo: {
-    empty: 'The task is empty.',
-    full: 'The board already has {n} tasks. Remove some finished ones, then add more.',
-    gone: 'This task is no longer on the board.',
-  },
   // a session going round in circles (server/loops.mjs): what Claude reads, and the notification's title
   loop: {
     deny: 'My Office blocked this call: it has already run {n} times and failed with the same error each time, so running it again unchanged will fail the same way. Try a different approach, or stop and ask the user.',
@@ -105,14 +85,6 @@ export default {
     pushTitle: '⛔ {name} looks stuck',
     resting: '{name} is already resting: nothing to stop.',
     gone: 'This session has closed.',
-  },
-  // a repository's CI gone red: the chat card's "Fix it" hands Claude the failing run
-  ci: {
-    pushTitle: '🔴 {repo}: CI is red',
-    pushBody: '{wf} on {branch} just failed. Open the group chat and tap "Fix it" to have Claude fix it.',
-    fix: 'CI "{wf}" on branch {branch} just went red: {url}\nRead the failing step\'s log (gh run view {run} --log-failed), find the cause, fix it, then run that same check here. When done, tell me why it failed and what you changed. Don\'t push until I say so.',
-    gone: 'This CI card is gone.',
-    notRed: 'This CI is no longer red.',
   },
   // two sessions on one file, a port another process holds (server/overlap.mjs): said to Claude with its next call
   overlap: {
@@ -134,7 +106,6 @@ export default {
     nothing: 'Nothing left to undo.',
     tell: "[My Office] The user just undid the previous turn's file changes; these files are back as they were before it: {files}. Read them again before going on, and don't redo those changes unless asked.",
   },
-  deny: { over: 'This call is no longer waiting: Claude has moved on.' },
   // the prompt cache's clock: a session waiting for you is about to go cold (off unless turned on)
   cache: {
   },

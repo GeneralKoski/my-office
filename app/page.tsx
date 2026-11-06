@@ -2,6 +2,7 @@ import TopBar from '@/components/office/TopBar';
 import Stage from '@/components/office/Stage';
 import SessionDrawer from '@/components/office/SessionDrawer';
 import ArchivePage from '@/components/office/ArchivePage';
+import FoldersPage from '@/components/office/FoldersPage';
 import PhoneModal from '@/components/office/PhoneModal';
 import Toast from '@/components/office/Toast';
 import OfficeBoot from '@/components/OfficeBoot';
@@ -15,6 +16,7 @@ export default function OfficePage() {
       <Stage />
       <SessionDrawer />
       <ArchivePage />
+      <FoldersPage />
       <PhoneModal />
       <Toast />
       <OfficeBoot />

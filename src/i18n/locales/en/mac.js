@@ -64,15 +64,4 @@ export default {
     sessions: 'Claude sessions',
     dev: 'Dev servers',
   },
-  stranded: {
-    removed: 'Deleted {dir}. The branch {branch} is still in the repository.',
-    removedDetached: 'Deleted {dir}.',
-    gone: 'That folder is not in the list any more.',
-    refused: {
-      gone: 'Not deleted: that folder is no longer one of the repository’s worktrees.',
-      notClean: 'Not deleted: something new is in it (not committed or not pushed).',
-      inUse: 'Not deleted: a Claude session is working in that folder.',
-      failed: "Git didn't delete it: {why}",
-    },
-  },
 };

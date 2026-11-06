@@ -23,16 +23,15 @@ test('pinned in the drawer, said to Claude again after a compaction (only then),
   await page.click('#tab-pins');
   const pins = page.locator('#ds-body .pins');
   await expect(pins.locator('.pins-empty')).toBeVisible();
-  for (const note of ['commit messages in Italian', 'never push without asking']) { await pins.locator('.pins-in').fill(note); await pins.locator('.pins-in').press('Enter'); }
+  for (const [i, note] of ['commit messages in Italian', 'never push without asking'].entries()) { await pins.locator('.pins-in').fill(note); await pins.locator('.pins-in').press('Enter'); await expect(page.locator('#ds-body .pins-list li')).toHaveCount(i + 1); }   // (the box is drawn again once each note is in: the next one waits for it)
   await expect(page.locator('#ds-body .pins-list li')).toHaveCount(2);
   await expect(page.locator('#tab-pins')).toHaveText('Pinned (2)');
-  // compacted: both said again, and the chat says so; a session that only starts: nothing
+  // compacted: both said again; a session that only starts: nothing
   const said = await start(request, 'compact');
   expect(said).toContain('This conversation was just compacted');
   expect(said).toContain('- commit messages in Italian\n- never push without asking');
   expect(await start(request, 'startup')).toBe('');
   expect(await start(request, 'resume')).toBe('');
-  await expect.poll(async () => (await (await request.get('/api/chat')).json()).msgs.some((m: { kind: string, text?: string }) => m.kind === 'sys' && /the 2 notes you pinned were said again/.test(m.text || '')), { timeout: 10_000 }).toBe(true);
   // ✕ unpins one; the tab says when they were last said again
   await page.click('#tab-act'); await page.click('#tab-pins');
   await expect(page.locator('#ds-body .pins-said')).toContainText('Last said again at');

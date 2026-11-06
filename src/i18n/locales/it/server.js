@@ -33,21 +33,6 @@ export default {
     failed: 'Non sono riuscito a scrivere le impostazioni di Claude Code.',
     splitNote: '## Compiti grandi: passa le parti ai subagent\nQuando un compito ha più parti indipendenti (lettura o ricerca in molti punti, modifiche che non si toccano tra loro), dai ogni parte a un subagent con lo strumento Agent e fai girare in parallelo quelle indipendenti. Questa sessione coordina: divide il lavoro, scrive a ogni subagent un brief con il contesto che gli serve, mette insieme i risultati e li controlla prima di dire che ha finito. I compiti piccoli, o quelli che richiedono un filo di contesto ininterrotto, li fa da sola.',
   },
-  ai: {
-    noAccount: 'Quell\'account non è più nell\'elenco.',
-    noCopy: 'L\'ufficio non ha un accesso salvato per quell\'account. Aggiungilo di nuovo.',
-    seatFailed: 'Non sono riuscito a scrivere il file di accesso di Codex.',
-    inSeat: 'Quello è l\'account in uso. Passa prima a un altro.',
-    noCli: 'Non trovo Codex su questo computer (il programma codex, o l\'estensione Codex di un editor).',
-    loginFailed: 'Non sono riuscito ad avviare l\'accesso di Codex.',
-    noToken: 'L\'ufficio non ha un accesso salvato per quell\'account.',
-    writeFailed: 'Non sono riuscito a scrivere le impostazioni di {app}.',
-    busy: { one: '{n} sessione Claude in {app} sta ancora lavorando. Aspetta che finisca, o chiudi {app} tu stesso.', other: '{n} sessioni Claude in {app} stanno ancora lavorando. Aspetta che finiscano, o chiudi {app} tu stesso.' },
-    quitFailed: '{app} non si è chiuso (forse sta chiedendo di salvare un file). Chiudilo tu e il cambio avviene subito.',
-    needsRestart: '{app} è aperto: va chiuso e riaperto.',
-    noRestart: 'L\'ufficio può chiudere e riaprire {app} solo su un Mac. Chiudilo tu e il cambio avviene subito.',
-    noDb: 'Non riesco a leggere le impostazioni di {app} ({app} è installato, e c\'è il programma sqlite3?).',
-  },
   forbidden: 'Non consentito.',
   badRequest: 'Richiesta non valida.',
   // un nome per un comando senza descrizione, dalle sue prime parole: "Esegui i test · npm run test"
@@ -93,11 +78,6 @@ export default {
     subReport: 'Un subagent ha mandato un report',
     interrupted: 'Hai fermato Claude',
   },
-  todo: {
-    empty: 'Il compito è vuoto.',
-    full: 'La bacheca ha già {n} compiti. Togline qualcuno già finito, poi aggiungine altri.',
-    gone: 'Questo compito non è più sulla bacheca.',
-  },
   // una sessione che gira in tondo (server/loops.mjs): cosa legge Claude, e il titolo della notifica
   loop: {
     deny: 'My Office ha bloccato questa chiamata: è già stata eseguita {n} volte ed è fallita ogni volta con lo stesso errore, quindi eseguirla di nuovo senza cambiarla fallirà allo stesso modo. Prova un approccio diverso, oppure fermati e chiedi all\'utente.',
@@ -106,14 +86,6 @@ export default {
     pushTitle: '⛔ {name} sembra bloccata',
     resting: '{name} sta già riposando: niente da fermare.',
     gone: 'Questa sessione è stata chiusa.',
-  },
-  // la CI di un repository diventata rossa: il "Sistemala" della scheda in chat passa a Claude l'esecuzione fallita
-  ci: {
-    pushTitle: '🔴 {repo}: la CI è rossa',
-    pushBody: '{wf} su {branch} è appena fallito. Apri la chat di gruppo e tocca "Sistemala" per farla sistemare a Claude.',
-    fix: 'La CI "{wf}" sul branch {branch} è appena diventata rossa: {url}\nLeggi il log del passo fallito (gh run view {run} --log-failed), trova la causa, correggila, poi esegui qui lo stesso controllo. Quando hai finito, dimmi perché è fallita e cosa hai cambiato. Non fare push finché non te lo dico io.',
-    gone: 'Questa scheda della CI non c\'è più.',
-    notRed: 'Questa CI non è più rossa.',
   },
   // due sessioni su un file, una porta occupata da un altro processo (server/overlap.mjs): detto a Claude con la sua prossima chiamata
   overlap: {
@@ -135,7 +107,6 @@ export default {
     nothing: 'Non resta più niente da annullare.',
     tell: '[My Office] L\'utente ha appena annullato le modifiche ai file del turno precedente; questi file sono tornati com\'erano prima: {files}. Rileggili prima di proseguire e non rifare quelle modifiche se non richiesto.',
   },
-  deny: { over: 'Questa chiamata non è più in attesa: Claude è andato avanti.' },
   // l'orologio della prompt cache: una sessione che aspetta te sta per raffreddarsi (disattivato salvo attivazione)
   cache: {
   },

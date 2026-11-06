@@ -8,6 +8,7 @@ the page is only the 2D list, which is light on memory and CPU (the 3D world was
 
 - **Sessions as a list**: working, needs you, resting, always all groups at full width; search with `/`. Hold a resting row to close its session.
 - **One conversation, one page**: a click opens the chat on a full page with the numbers and actions in a column beside it; a pencil renames it (the same `custom-title` line `/rename` writes). A message box under the chat sends a note to a working session or carries on a resting one, and a microphone dictates into it.
+- **New session**: the `+` in the top bar opens your folders, one level at a time, with starred and recent ones, git projects marked and the chats that ran in each. Start a chat in any of them, or carry on one that ran there.
 - **Archive**: every conversation Claude Code has kept, whatever its folder, in one searchable list with its full path (titles, folders and what was said), including those whose transcript Claude Code already deleted.
 - **Approve from the page**: permission requests, Claude's questions and plans as cards (Allow, Always allow, Deny); a red badge in the top bar counts them and the cards float over any page.
 - **Your plan**: the 5-hour and weekly usage as two rings in the top bar, green to red with the percentage.
@@ -45,8 +46,8 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 
 | Command | What it does |
 | --- | --- |
-| `install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names]` | Adds three kinds of hooks: event hooks, approval hooks, and a status line that reports your plan's usage. Your own status line keeps running inside it. It also turns on Claude Code's own usage numbers (OpenTelemetry) (kept on this computer, 30 days), unless you already send them somewhere: see below. `--service` runs the office in the background from login: launchd on macOS, a systemd user service on Linux, the Startup folder on Windows (no admin needed). `--lan` lets a phone on the same Wi-Fi watch. `--no-approve` leaves out the approval hooks. `--no-status` leaves your status line alone. `--no-otel` leaves telemetry off; `--no-otel-names` keeps the names of your own MCP servers, skills and agents hidden ("custom"). |
-| `uninstall` | Removes every My Office hook, the telemetry settings install added, and the background service, and keeps the rest of `settings.json`. |
+| `install [--service] [--lan] [--no-approve] [--no-status]` | Adds three kinds of hooks: event hooks, approval hooks, and a status line that reports your plan's usage. Your own status line keeps running inside it. `--service` runs the office in the background from login: launchd on macOS, a systemd user service on Linux, the Startup folder on Windows (no admin needed). `--lan` lets a phone on the same Wi-Fi watch. `--no-approve` leaves out the approval hooks. `--no-status` leaves your status line alone. |
+| `uninstall` | Removes every My Office hook, the telemetry settings an older install added, and the background service, and keeps the rest of `settings.json`. |
 | `doctor` | Checks each step and says what is missing and how to fix it. |
 | `start [--lan]` | Runs the server in this terminal (no launchd). |
 | `pin [--new]` | Shows the phone PIN; `--new` changes it and signs every phone out. |
@@ -112,7 +113,7 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   `--no-menubar` leaves it out.
 - **My Office in the editor's side bar**: `install` also adds a small panel to each editor on the computer (Antigravity,
   VS Code, Cursor, Windsurf…: its icon in the activity bar): who is working, who waits for you with "Allow / Deny" right
-  there, each tool's limit left; click a session to bring its window forward. It is the office's light page `/panel`
+  there, the plan's limit left; click a session to bring its window forward. It is the office's light page `/panel`
   so it costs next to nothing; `--no-panel` leaves the editors alone, `uninstall` takes it out.
 - **Each session** shows a context bar, and its cost at API prices on its page: with a subscription, this is not your
   bill.
@@ -172,12 +173,6 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   | Plan usage | while a page is open | `OFFICE_USAGE=0` |
   | GitHub CI check, through your `gh` login | while a page is open | `OFFICE_CI=0` |
     
-- **Usage numbers** (Claude Code's own OpenTelemetry counters and events) go from Claude Code to `127.0.0.1` only: the
-  receiver refuses anything from a web page, the Wi-Fi or the tunnel, reads JSON only (4 MB a request at most), and
-  keeps daily sums of cost and tokens in `data/otel/` for 30 days; e-mail addresses, prompts and commands are never
-  stored. `install` adds them to the `env` of `~/.claude/settings.json`, tagged `MY_OFFICE_OTEL` so `uninstall` takes
-  out exactly those keys, and never if you already send telemetry somewhere (settings, your shell or a managed
-  policy). Prompts stay hidden (`OTEL_LOG_USER_PROMPTS` is not set); `--no-otel` leaves it all off.
 - **Stop buttons** re-check the process ID **and its start time** just before acting. A new process that reused an
   old ID is never stopped by mistake. Every stop, cleanup and approval is written to `data/actions.log`.
 - **Phones**:

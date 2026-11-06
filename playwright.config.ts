@@ -15,9 +15,9 @@ export default defineConfig({
   outputDir: OUT,
   timeout: 90_000,
   retries: process.env.CI ? 1 : 0,
-  workers: 2,                       // each test builds a whole 3D office: two at a time is plenty
+  workers: 2,
   expect: { timeout: 30_000 },      // the office takes a few seconds to build on a busy machine or a CI runner
-  use: { baseURL: `http://127.0.0.1:${PORT}`, viewport: { width: 1440, height: 900 } },
+  use: { baseURL: `http://127.0.0.1:${PORT}`, viewport: { width: 1440, height: 900 }, ...(process.env.PW_CHROMIUM && { launchOptions: { executablePath: process.env.PW_CHROMIUM } }) },   // (PW_CHROMIUM: a browser already on this machine)
   webServer: {
     command: 'node server/index.mjs',
     url: `http://127.0.0.1:${PORT}/health`,

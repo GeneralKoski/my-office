@@ -19,7 +19,7 @@ const post = (path, body) => fetch(q(path), { method: 'POST', headers: { 'Conten
 const PAGE = Math.random().toString(36).slice(2, 10);
 const PERM_VERB = new Set(['bash', 'edit', 'write', 'web', 'fetch', 'mcp', 'agent', 'read']);
 
-const S = { sessions: new Map(), perms: new Map(), limits: null, ai: null, local: false, live: false };
+const S = { sessions: new Map(), perms: new Map(), limits: null, local: false, live: false };
 const drafts = new Map();  // (a question's picks and typed words, a plan's note, per request: kept over every redraw)
 const draftOf = (p) => { let d = drafts.get(p.id); if (!d) { d = { sel: (p.questions || []).map(() => []), other: (p.questions || []).map(() => ''), note: '' }; drafts.set(p.id, d); } return d; };
 const armed = new Set();   // (a risky command's "allow", pressed once: the second press sends it)
@@ -31,7 +31,7 @@ function ago(t) {
 }
 const nameOf = (s) => s?.title || s?.name || '';
 
-/* ---------- what each tool has left (the account in use): Claude's tightest limit, Codex's, Antigravity's model ---------- */
+/* ---------- what the plan has left (the account in use): Claude's tightest limit ---------- */
 function quotas() {
   const now = Date.now(), out = [];
   const live = (ws) => (ws || []).filter((w) => !w.resetsAt || w.resetsAt > now);
@@ -42,10 +42,6 @@ function quotas() {
     // every other account, also one with nothing to show now (never read yet, or its readings past their reset): why
     ...(S.limits.others || []).map((o) => { const rows = liveWindows(o.windows); return { title: o.label || tr('mac.plan.otherAccount', { name: o.name }), rows, note: rows.length ? '' : o.note || tr('mac.plan.loading') }; }),
   ] }) });
-  const cx = S.ai?.codex, ca = cx?.list?.find((a) => a.id === cx.now), cw = tight(ca?.windows);
-  if (cw) out.push({ name: 'Codex', pct: cw.pct, detail: () => ({ groups: [{ rows: liveWindows(ca.windows) }] }) });
-  const ag = S.ai?.ag, aa = ag?.list?.find((a) => a.id === ag.now), r = aa?.rows?.[0];
-  if (r) out.push({ name: r.label.split(' ')[0] || 'Antigravity', pct: r.pct, detail: () => ({ groups: [{ rows: aa.rows }] }) });
   return out;
 }
 
@@ -204,13 +200,12 @@ function draw() {
 function apply(d) {
   if (d.k === 'snap') {
     S.sessions = new Map((d.sessions || []).map((s) => [s.id, s]));
-    if ('local' in d) { S.local = !!d.local; S.perms = new Map((d.perms || []).map((p) => [p.id, p])); S.limits = d.limits || null; S.ai = d.ai || null; }
+    if ('local' in d) { S.local = !!d.local; S.perms = new Map((d.perms || []).map((p) => [p.id, p])); S.limits = d.limits || null; }
   } else if (d.k === 'sess' || d.k === 'ev' || d.k === 'stats') { if (d.s) S.sessions.set(d.s.id, d.s); }
   else if (d.k === 'gone') S.sessions.delete(d.id);
   else if (d.k === 'perm') S.perms.set(d.p.id, d.p);
   else if (d.k === 'permDone') S.perms.delete(d.id);
   else if (d.k === 'limits') S.limits = d.limits || null;
-  else if (d.k === 'ai') S.ai = d.ai || null;
   else return;
   draw();
 }

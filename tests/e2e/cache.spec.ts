@@ -2,7 +2,7 @@ import path from 'node:path';
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
 import { HOME_DIR } from '../../playwright.config';
 
-// The prompt cache's clock (src/shared/cache-clock.js): the drawer's line and the list row say how long a resting
+// The prompt cache's clock (src/shared/cache-clock.js): the session page's line says how long a resting
 // session's cache stays warm.
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => { try { localStorage.setItem('office-tips', 'seen'); localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } }); });
 
@@ -33,7 +33,6 @@ test('no word from Claude Code (an older version): guessed from the end of the t
   // (an API key's five minutes, or a subscription's hour once the office has heard of plan limits, as it has when
   // what-eats-your-plan's spec ran first on the same office)
   await expect(page.locator('#ds-cache')).toHaveText(/^Prompt cache still warm for ~(?:[345]|5[5-9]|60) minutes \(estimated\)$/);
-  await expect(page.locator('#lite .v2-row', { hasText: s.name }).locator('.v2-sub')).toContainText(/☕ warm (?:[345]|5[5-9]|60) min/);
   await s.end();
   expect(errors).toEqual([]);
 });
