@@ -14,6 +14,7 @@ the page is only the 2D list, which is light on memory and CPU (the 3D world was
 - **Your plan**: the 5-hour and weekly usage as two rings in the top bar, green to red with the percentage.
 - **Safety nets**: stuck-loop breaker, two sessions on one file, undo the last turn, pinned notes that survive compaction.
 - **Phone**: watch and approve from a phone on the same Wi-Fi (`--lan`).
+- **Desktop launchers (macOS)**: `scripts/open-office.sh` builds if needed, starts the server and opens the page; `scripts/stop-office.sh` stops it. Wrap them in a double-clickable app (`osacompile` with a `do shell script` line); the server log is `data/server.log`.
 
 > My Office is a community project. It is not made by, endorsed by or affiliated with Anthropic.
 
