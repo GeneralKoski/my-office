@@ -48,3 +48,5 @@
 .pc-bar i { display: block; height: 100%; background: var(--amber); transition: width .25s linear; }
 /* on a phone: where to answer instead (the Mac hasn't allowed phones), or why a risky command can't be allowed here */
 .pc-phone-note { flex-basis: 100%; font-size: .74rem; color: var(--muted); line-height: 1.4; }
+/* over a conversation or the archive (ui/lite.js moves it out of the list) */
+.perm-stack.is-float { position: fixed; top: 64px; right: 16px; left: auto; transform: none; width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 80px); overflow-y: auto; z-index: 45; }

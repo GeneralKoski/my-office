@@ -6,6 +6,7 @@ export default {
   },
   topBar: {
     sampleData: 'sample data',
+    approvals: 'Waiting for your OK',
     settings: 'Settings',
     settingsTitle: 'Settings: office, scenery, characters, notifications, open on your phone',
     phone: 'Open on your phone',

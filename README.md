@@ -6,8 +6,10 @@ it, how full its context is, and approvals you can answer from the page.
 This is a fork of [khanh020905/my-office](https://github.com/khanh020905/my-office) (MIT) with the 3D office removed:
 the page is only the 2D list, which is light on memory and CPU (the 3D world was most of the original page's weight).
 
-- **Sessions as a list**: working, needs you, resting; search with `/`; a click opens the session's drawer.
-- **Approve from the page**: permission requests, Claude's questions and plans as cards (Allow, Always allow, Deny).
+- **Sessions as a list**: working, needs you, resting, always all groups at full width; search with `/`. Hold a resting row to close its session.
+- **One conversation, one page**: a click opens the chat on a full page with the numbers and actions in a column beside it; a pencil renames it (the same `custom-title` line `/rename` writes). A message box under the chat sends a note to a working session or carries on a resting one, and a microphone dictates into it.
+- **Archive**: every conversation Claude Code has kept, whatever its folder, in one searchable list with its full path (titles, folders and what was said), including those whose transcript Claude Code already deleted.
+- **Approve from the page**: permission requests, Claude's questions and plans as cards (Allow, Always allow, Deny); a red badge in the top bar counts them and the cards float over any page.
 - **Your plan**: the 5-hour and weekly usage as two rings in the top bar, green to red with the percentage.
 - **Safety nets**: stuck-loop breaker, two sessions on one file, undo the last turn, pinned notes that survive compaction.
 - **Phone**: watch and approve from a phone on the same Wi-Fi (`--lan`).
@@ -77,7 +79,7 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   which server holds it and whose it is, and not to kill it. Both go through the stuck-loop hook, so they need nothing
   more installed.
 - **Pinned notes that survive compaction**: a session's drawer has a **Pinned** tab for what that conversation should
-  always keep in mind ("commit messages in Vietnamese", "never push without asking"). When Claude Code compacts a long
+  always keep in mind ("commit messages in Italian", "never push without asking"). When Claude Code compacts a long
   conversation, what you said along the way can be summed up away; right after each compaction the office says the
   pinned notes again (the `SessionStart` hook, source `compact`). Kept by conversation in
   `data/pins.json`, 12 at most. Older installs: run `my-office install` once more to add the hook.
@@ -122,7 +124,7 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 
 ### Small things
 
-- English or Vietnamese (Settings → Display).
+- English or Italian (Settings → Display).
 - **The list**: approvals sit on top with their buttons, then needs you, working and resting; tabs count and filter
   them, a search (`/`) finds one by name, project or branch. Each row: the conversation, what it is doing now in words
   of the work, its context (once it is filling up), its time and a subagent count; the branch only when it has
@@ -169,7 +171,6 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   | --- | --- | --- |
   | Plan usage | while a page is open | `OFFICE_USAGE=0` |
   | GitHub CI check, through your `gh` login | while a page is open | `OFFICE_CI=0` |
-  | Translation into Vietnamese | only in Vietnamese mode | `OFFICE_TRANSLATE=0` |
     
 - **Usage numbers** (Claude Code's own OpenTelemetry counters and events) go from Claude Code to `127.0.0.1` only: the
   receiver refuses anything from a web page, the Wi-Fi or the tunnel, reads JSON only (4 MB a request at most), and
@@ -212,7 +213,6 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 | `OFFICE_DATA_DIR` | `data/` | Where the office keeps its files. |
 | `OFFICE_USAGE` | on | `0` stops reading your plan's usage. |
 | `OFFICE_CI` | on | `0` stops checking CI runs with `gh`. |
-| `OFFICE_TRANSLATE` | on | `0` leaves Claude's English descriptions untranslated in Vietnamese mode. |
 
 ## Development
 

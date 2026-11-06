@@ -12,7 +12,7 @@ import { t as tr } from '../../i18n/index.js';
 let armedId = null, armedAt = 0, armTimer = 0, pressTimer = 0, press = null;
 let query = '', head = null, permHost = null, listEl = null, emptyEl = null;
 const GROUPS = ['wait', 'work', 'rest'];
-const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
+const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const statusOf = (s) => (s.status === 'wait' ? 'wait' : s.status === 'rest' ? 'rest' : 'work');
 
 // what it is doing now, in words of the work (not of the office: no lift, no shop)
@@ -28,6 +28,18 @@ function matches(s) {
   if (!query) return true;
   const hay = fold([dn(s), s.name, s.dir, s.git?.branch, s.lastPrompt].join(' '));
   return fold(query).split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+}
+
+/* ---------- approvals: in the list on the home page, floating over a conversation or the archive ---------- */
+function placePerms() {
+  const stack = $('perm-stack'); if (!stack || !permHost) return;
+  const over = !$('dr-session').hidden || !$('archive').hidden, host = over ? $('app') : permHost;
+  stack.classList.toggle('is-float', over);
+  if (stack.parentNode !== host) host.append(stack);
+}
+function syncApprovals() {
+  const n = $('perm-stack')?.children.length || 0, b = $('btn-approvals');
+  b.hidden = !n; $('approvals-n').textContent = String(n);
 }
 
 /* ---------- hold a row to close its session ---------- */
@@ -100,8 +112,7 @@ export function showLite() {
   $('lite').hidden = false;
   // the approvals: at the top of the list
   build();
-  const stack = $('perm-stack');
-  if (stack && permHost && stack.parentNode !== permHost) permHost.append(stack);
+  placePerms();
   renderLite();
 }
 export function renderLite() {
@@ -126,6 +137,11 @@ export function renderLite() {
 
 export function setup() {
   watchHold();
+  // the approvals follow the page that is open, and the top bar counts them
+  const pages = new MutationObserver(placePerms);
+  for (const id of ['dr-session', 'archive']) pages.observe($(id), { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(syncApprovals).observe($('perm-stack'), { childList: true });
+  $('btn-approvals').addEventListener('click', () => { document.querySelector('#dr-session .dr-back')?.click(); $('ar-close')?.click(); });
   // "/" finds a session (not while typing somewhere)
   document.addEventListener('keydown', (e) => {
     if (e.key !== '/' || document.body.classList.contains('is-archive') || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
