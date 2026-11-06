@@ -1,5 +1,5 @@
 // Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a
-// click opens it here, large, over the office (the server serves it by id: GET /api/image). Esc, the ✕ or a click
+// click opens it here, large, over the page (the server serves it by id: GET /api/image). Esc, the ✕ or a click
 // outside the picture closes it.
 import { el } from '../core/env.js';
 import { TOKEN } from '../net/live.js';

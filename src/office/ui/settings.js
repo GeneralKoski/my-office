@@ -1,9 +1,7 @@
-// Settings popover: language, toggles, the plan and phone.
+// Settings popover: language, toggles, alerts and the phone.
 import { state } from '../core/state.js';
 import { $, STATIC } from '../core/env.js';
 import { toast } from './activity.js';
-import { renderLimits } from './mac-drawer.js';
-import { renderAi } from './ai-accounts.js';
 import { sfx } from '../audio/sfx.js';
 import { reportPresence } from './permissions.js';
 import { TOKEN } from '../net/live.js';
@@ -34,10 +32,7 @@ function showTab(k, focus = false) {
   for (const p of popLook.querySelectorAll('[data-st-panel]')) p.hidden = p.dataset.stPanel !== k;
   try { localStorage.setItem('office-settings-tab', k); } catch { /* storage blocked */ }
 }
-export function togglePop(open = popLook.hidden) { popLook.hidden = !open; btnLook.setAttribute('aria-expanded', String(open)); if (open) { togglePlan(false); showTab(tabNow); } }
-let popPlan;
-let btnPlan;
-export function togglePlan(open = popPlan.hidden) { popPlan.hidden = !open; btnPlan.setAttribute('aria-expanded', String(open)); if (open) { togglePop(false); renderLimits(); renderAi(); } }
+export function togglePop(open = popLook.hidden) { popLook.hidden = !open; btnLook.setAttribute('aria-expanded', String(open)); if (open) showTab(tabNow); }
 function setToggle(k, v) {
   if (k === 'sound') sfx.set(v);
   if (k === 'perm') { state.permOn = v; try { localStorage.setItem('office-perm', v ? 'on' : 'off'); } catch { /* storage blocked */ } reportPresence(); }
@@ -60,11 +55,6 @@ export function setup() {
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !popLook.hidden) { togglePop(false); btnLook.focus(); } });
   document.addEventListener('click', (e) => { if (!popLook.hidden && !e.target.closest('#pop-look, #btn-look')) togglePop(false); });
-  // the plan popover, opened from its pill
-  popPlan = $('pop-plan'); btnPlan = $('btn-plan');
-  btnPlan.addEventListener('click', (e) => { e.stopPropagation(); togglePlan(); });
-  // (a click on something the card just replaced (a step of adding an account) isn't a click outside it)
-  document.addEventListener('click', (e) => { if (!popPlan.hidden && e.target.isConnected && !e.target.closest('#pop-plan, #btn-plan')) togglePlan(false); });
   popLook.addEventListener('click', (e) => {
     const tb = e.target.closest('[data-st-tab]'); if (tb) { showTab(tb.dataset.stTab); return; }
     if (e.target.closest('#st-close')) { togglePop(false); btnLook.focus(); return; }

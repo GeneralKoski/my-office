@@ -4,6 +4,9 @@ export default {
   // the prompt cache's clock (src/shared/cache-clock.js), under the session's folder
   cache: { warm: { one: 'Prompt cache still warm for ~{n} minute', other: 'Prompt cache still warm for ~{n} minutes' }, cold: 'Prompt cache gone cold: the next message re-reads ~{tokens} tokens', coldNoSize: 'Prompt cache gone cold', guessed: '(estimated)', title: 'While the cache is warm, writing to this session again is cheap. Once cold, the next message reads the whole conversation again.' },
   priceNote: 'Equivalent list API price (from the price table in azorkai/claude-code-office). On a Pro/Max plan this is not what you pay.',
+  back: 'Back to the list',
+  info: 'Details',
+  composer: { placeholder: 'Message Claude…', send: 'Send', demo: 'Demo: nothing is sent.', note: 'Note sent: Claude reads it between two steps.', kept: 'Kept: it goes out as a message once Claude is done.', mic: 'Dictate', micStop: 'Stop dictating', micDenied: 'The microphone is blocked: allow it for this page in the browser.', micFail: 'Dictation stopped: the browser’s speech recognition failed.', started: 'Sent: Claude is carrying on this conversation.' },
   tabSubs: 'Subagents',
   tabSubsN: 'Subagents ({n})',
   demoNoWindow: 'Demo: there is no real window to open.',
@@ -34,12 +37,6 @@ export default {
     failed: "Couldn't change the account.",
   },
   close: {
-    closing: 'Closing…',
-    confirm: 'Sure? Click again to close',
-    label: 'Close session',
-    labelMem: 'Close session · {mem}',
-    title: 'Stop this resting Claude session. The conversation is kept: reopen it with claude --resume.',
-    titleMem: 'Stop this resting Claude session and free {mem} of RAM. The conversation is kept: reopen it with claude --resume.',
     gone: "Can't find this session's process anymore. It may have stopped already.",
   },
   loadingChat: 'Loading conversation…',

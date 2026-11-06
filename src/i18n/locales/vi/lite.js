@@ -3,7 +3,6 @@ export default {
   wait: 'Cần bạn',
   work: 'Đang làm',
   rest: 'Đang nghỉ',
-  building: 'Đang dựng văn phòng 3D…',
   empty: 'Chưa có phiên Claude Code nào đang mở.',
   subs: '{n} trợ lý',
   ctx: 'ngữ cảnh {pct}%',
@@ -11,5 +10,6 @@ export default {
   all: 'Tất cả',
   search: 'Tìm phiên, dự án, nhánh…  (phím /)',
   none: 'Không phiên nào khớp “{q}”.',
+  closeAsk: 'Bấm lần nữa để đóng phiên này',
   now: { wait: 'Chờ bạn duyệt', waitOn: 'Chờ bạn duyệt: {what}', done: 'Xong' },
 };

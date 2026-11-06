@@ -93,6 +93,7 @@ details[open] > summary .st-chev { transform: rotate(90deg); }
 .chat-jump:hover { background: #2F3A4D; }
 .chat-jump svg { width: 14px; height: 14px; transform: rotate(90deg); }
 .chat-empty { color: var(--muted); font-size: .83rem; }
+.rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .sub-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .sub-head b { font-size: .86rem; }
 .sub-card { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }

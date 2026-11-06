@@ -1,7 +1,7 @@
-// Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the
-// group chat and an approval waiting, even with the office closed and the phone locked. Switched on in the phone window
+// Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): an approval waiting, even
+// with the office closed and the phone locked. Switched on in the phone window
 // (topbar.js). An iPhone gets them only in the office added to its home screen (iOS 16.4 and later), and only over
-// https (the Cloudflare address, not the home network's plain http). A tap on one opens the office, at the chat.
+// https (the Cloudflare address, not the home network's plain http).
 import { STATIC } from '../core/env.js';
 import { TOKEN } from '../net/live.js';
 
@@ -57,8 +57,4 @@ export async function pushTest() {
 export function setup() {
   if (!supported()) return;
   worker().catch(() => {});   // (the app on a home screen needs it, and the notifications)
-  // a tap on a notification: the office, at the chat for an answer (the chat window loaded when wanted: it imports this)
-  const openChat = () => import('./group-chat-view.js').then((m) => m.toggle(true)).catch(() => {});
-  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data?.k === 'open' && /[?&]chat\b/.test(e.data.url || '')) openChat(); });
-  if (new URLSearchParams(location.search).has('chat')) setTimeout(openChat, 1500);
 }

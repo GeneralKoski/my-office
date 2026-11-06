@@ -1,4 +1,4 @@
-/* Settings: a panel of picture cards in four tabs, pinned under the top bar on the right */
+/* Settings: a panel in two tabs, pinned under the top bar on the right */
 .pop-settings { position: fixed; top: 64px; right: 12px; width: min(440px, calc(100vw - 24px)); max-height: calc(100vh - 80px); padding: 0; display: flex; flex-direction: column; gap: 0; overflow: hidden; }
 .st-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 4px 18px; }
 .st-head b { font-size: .98rem; }
@@ -17,7 +17,7 @@
 .st-group { display: grid; gap: 8px; }
 .st-group:not(:has(.st-act:not([hidden]))) { display: none; }   /* no phone or alert button on this device */
 /* phone and alerts: two cards side by side, an icon, what it is, what it does */
-.st-acts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.st-acts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-top: 8px; }
 .st-act { all: unset; box-sizing: border-box; position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 2px 10px; padding: 11px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); cursor: pointer; }
 .st-act:hover { background: var(--card-2); border-color: rgba(255, 255, 255, .2); }
 .st-act:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }

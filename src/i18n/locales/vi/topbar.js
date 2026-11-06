@@ -41,7 +41,6 @@ export default {
     tunNote: 'Địa chỉ giữ nguyên tới khi tắt đường hầm hoặc khởi động lại Mac.',
     tunError: 'Chưa mở được đường hầm: {error}. Tắt rồi bật lại để thử lần nữa.',
     pinTitle: 'Mã PIN',
-    pinLabel: 'Điện thoại vào bằng mã',
     setPin: 'Đặt mã riêng',
     setPinHint: '6–10 chữ số',
     save: 'Lưu',

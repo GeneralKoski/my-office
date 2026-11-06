@@ -7,27 +7,34 @@ export default async function SessionDrawer() {
   return (
     <aside className="drawer" id="dr-session" hidden aria-label={t('ui.sessionDrawer.label')}>
       <header className="dr-head">
+        <button className="icon-btn dr-back" type="button" data-close aria-label={t('drawer.back')} title={t('drawer.back')}><span data-icon="back"></span></button>
         <span className="dr-dot" id="ds-dot"></span>
-        <div className="dr-title"><h2 id="ds-name"></h2><p id="ds-dir"></p><p className="ds-cache" id="ds-cache" title={t('drawer.cache.title')} hidden></p></div>
+        <div className="dr-title"><div className="dr-trow"><h2 id="ds-name"></h2><button className="ds-rename" id="ds-rename" type="button" hidden aria-label={t('archive.rename')} title={t('archive.rename')}><span data-icon="pencil"></span></button></div><p id="ds-dir"></p><p className="ds-cache" id="ds-cache" title={t('drawer.cache.title')} hidden></p></div>
         <span className="pill" id="ds-status"></span>
-        <button className="icon-btn" type="button" data-close aria-label={t('common.close')}><span data-icon="x"></span></button>
+        <button className="icon-btn dr-info" id="dr-info" type="button" aria-expanded="false" aria-label={t('drawer.info')} title={t('drawer.info')}><span data-icon="info"></span></button>
       </header>
-      <div className="dr-actions" id="ds-actions"></div>
-      <ul className="counts">
-        <li><b id="ds-read">0</b><span>{t('ui.sessionDrawer.read')}</span></li>
-        <li><b id="ds-edit">0</b><span>{t('ui.sessionDrawer.edit')}</span></li>
-        <li><b id="ds-cmd">0</b><span>{t('ui.sessionDrawer.cmd')}</span></li>
-        <li><b id="ds-time">–</b><span>{t('ui.sessionDrawer.time')}</span></li>
-        <li><b id="ds-ctx">–</b><span>{t('ui.sessionDrawer.ctx')}</span></li>
-        <li><b id="ds-cost">–</b><span>{t('ui.sessionDrawer.cost')}</span></li>
-      </ul>
-      <div className="tabs" role="tablist">
-        <button className="tab" role="tab" id="tab-chat" aria-selected="true" type="button">{t('ui.sessionDrawer.chat')}</button>
-        <button className="tab" role="tab" id="tab-subs" aria-selected="false" type="button">{t('ui.sessionDrawer.subs')}</button>
-        <button className="tab" role="tab" id="tab-act" aria-selected="false" type="button">{t('ui.sessionDrawer.activity')}</button>
-        <button className="tab" role="tab" id="tab-pins" aria-selected="false" type="button">{t('drawer.pins.tab')}</button>
+      <div className="dr-side">
+        <div className="tabs" role="tablist">
+          <button className="tab" role="tab" id="tab-chat" aria-selected="true" type="button">{t('ui.sessionDrawer.chat')}</button>
+          <button className="tab" role="tab" id="tab-subs" aria-selected="false" type="button">{t('ui.sessionDrawer.subs')}</button>
+          <button className="tab" role="tab" id="tab-act" aria-selected="false" type="button">{t('ui.sessionDrawer.activity')}</button>
+          <button className="tab" role="tab" id="tab-pins" aria-selected="false" type="button">{t('drawer.pins.tab')}</button>
+        </div>
+        <div className="dr-card">
+          <div className="dr-actions" id="ds-actions"></div>
+          <ul className="counts">
+            <li><b id="ds-read">0</b><span>{t('ui.sessionDrawer.read')}</span></li>
+            <li><b id="ds-edit">0</b><span>{t('ui.sessionDrawer.edit')}</span></li>
+            <li><b id="ds-cmd">0</b><span>{t('ui.sessionDrawer.cmd')}</span></li>
+            <li><b id="ds-time">–</b><span>{t('ui.sessionDrawer.time')}</span></li>
+            <li><b id="ds-ctx">–</b><span>{t('ui.sessionDrawer.ctx')}</span></li>
+            <li><b id="ds-cost">–</b><span>{t('ui.sessionDrawer.cost')}</span></li>
+          </ul>
+        </div>
       </div>
-      <div className="dr-body" id="ds-body"></div>
+      <div className="dr-main" id="dr-main">
+        <div className="dr-body" id="ds-body"></div>
+      </div>
     </aside>
   );
 }

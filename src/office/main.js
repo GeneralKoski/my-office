@@ -1,17 +1,15 @@
 // Boots the office: the 2D list of sessions. Every module's setup() runs once, in this order: the basics, the
-// sessions and the top bar, then the drawers, the group chat, the live connection (or the demo).
+// sessions and the top bar, then the settings, the live connection (or the demo).
 import * as coreEnv from './core/env.js';
 import * as uiIcons from './ui/icons.js';
 import * as uiLite from './ui/lite.js';
 import * as uiActivity from './ui/activity.js';
 import * as uiSessionDrawer from './ui/session-drawer.js';
-import * as uiMacDrawer from './ui/mac-drawer.js';
-import * as uiBurn from './ui/burn.js';
-import * as uiVault from './ui/vault.js';
+import * as uiComposer from './ui/composer.js';
+import * as uiArchive from './ui/archive.js';
+import * as uiPlan from './ui/plan.js';
 import * as uiTopbar from './ui/topbar.js';
 import * as uiSettings from './ui/settings.js';
-import * as uiGroupChat from './ui/group-chat.js';
-import * as uiGroupChatView from './ui/group-chat-view.js';
 import * as uiStuck from './ui/stuck.js';
 import * as uiMacApprove from './ui/mac-approve.js';
 import * as uiModels from './ui/models.js';
@@ -31,13 +29,11 @@ const MODULES = [
   uiLite,
   uiActivity,
   uiSessionDrawer,
-  uiMacDrawer,
-  uiBurn,
-  uiVault,
+  uiComposer,
+  uiArchive,
+  uiPlan,
   uiTopbar,
   uiSettings,
-  uiGroupChat,
-  uiGroupChatView,
   uiStuck,
   uiMacApprove,
   uiModels,
@@ -58,5 +54,5 @@ export function startOffice() {
   started = true;
   for (const m of MODULES) m.setup();
   demoDemo.start(); uiTopbar.renderBell();
-  uiSettings.syncToggles(); uiLite.setLite(true);
+  uiSettings.syncToggles(); uiLite.showLite();
 }

@@ -1,20 +1,17 @@
-// Page-wide basics: DOM helpers, the office clock, formatting.
+// Page-wide basics: DOM helpers, formatting.
 import { t, num } from '../../i18n/index.js';
 
 export const $ = (id) => document.getElementById(id);
 // The online demo: a static export with no server behind it (next.config.mjs, OFFICE_STATIC=1). It always runs demo mode.
 export const STATIC = process.env.NEXT_PUBLIC_OFFICE_STATIC === '1';
 export let reduceMotion;
-export let small;
 export const rand = (a, b) => a + Math.random() * (b - a);
 export const short = (s, n = 30) => { s = String(s ?? ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 export const pad2 = (n) => String(n).padStart(2, '0');
 export const nowMs = () => Date.now();
-let AT_SHIFT;
-export const officeNow = () => new Date(nowMs() + AT_SHIFT);
-export const hhmm = (ts = nowMs(), sec = false) => { const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}` + (sec ? `:${pad2(d.getSeconds())}` : ''); };
+export const hhmm = (ts = nowMs()) => { const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
 export const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-export const GB = 1024 ** 3;
+const GB = 1024 ** 3;
 export const fmtBytes = (b) => (b >= GB ? t('time.gb', { n: num(b / GB, b >= 10 * GB ? 0 : 1) }) : t('time.mb', { n: num(Math.max(1, Math.round(b / 1024 ** 2))) }));
 export function fmtAgo(sec) {
   if (sec >= 86400) { const n = Math.floor(sec / 86400); return t('time.day', { n }); }
@@ -26,13 +23,4 @@ export const fmtClock = (s) => { s = Math.max(0, Math.floor(s)); return s >= 360
 
 export function setup() {
   reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  small = matchMedia('(max-width: 720px)');
-  // The office's wall clock (lunch, the afternoon coffee, the season's decorations). ?at=12:10 or ?at=2026-12-24T20:00
-  // pretends it is that time, for screenshots and for trying a season out.
-  AT_SHIFT = (() => {
-    const q = new URLSearchParams(location.search).get('at'); if (!q) return 0;
-    const hm = /^(\d{1,2}):(\d{2})$/.exec(q), d = new Date();
-    const at = hm ? new Date(d.getFullYear(), d.getMonth(), d.getDate(), +hm[1], +hm[2]) : new Date(q);
-    return Number.isFinite(at.getTime()) ? at.getTime() - Date.now() : 0;
-  })();
 }

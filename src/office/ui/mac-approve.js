@@ -19,5 +19,4 @@ export function setup() {
     const r = await fetch(`/api/macapprove${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: !on }) }).then((x) => x.json()).catch(() => null);
     if (r?.ok) { on = !!r.on; draw(); } else toast(r?.message || tr('drawer.unreachable'), 6000);
   });
-  load();
 }

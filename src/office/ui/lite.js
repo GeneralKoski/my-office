@@ -1,16 +1,16 @@
 // The page's one view, the list: every session as a row. Approvals on top, then
-// needs you → working → resting; filter tabs, a search, and per row the conversation, its project and branch, what it
-// is doing now, its checklist, its context, its time and its cost. A click opens the session's drawer. Saves the
-// battery on a phone and works without WebGL. First idea from agent-office's lite page (MIT).
+// needs you → working → resting; a search, and per row the conversation, its project and branch, what it
+// is doing now, its context and its time. A click opens the session's page. First idea from agent-office's lite page (MIT).
 import { $, el, fmtAgo, fmtClock, nowMs, short } from '../core/env.js';
 import { dn, sessions } from '../core/sessions.js';
 import { icon, TYPE_ICON } from './icons.js';
 import { verb } from './event-text.js';
-import { openSession } from './session-drawer.js';
+import { canClose, closeSessionProcess, openSession } from './session-drawer.js';
 import { t as tr } from '../../i18n/index.js';
 
-export let lite = false;
-let filter = 'all', query = '', head = null, tabs = null, permHost = null, listEl = null, emptyEl = null;
+// a row held down asks to close its (resting) session; the next tap on it does, anything else cancels
+let armedId = null, armedAt = 0, armTimer = 0, pressTimer = 0, press = null;
+let query = '', head = null, permHost = null, listEl = null, emptyEl = null;
 const GROUPS = ['wait', 'work', 'rest'];
 const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
 const statusOf = (s) => (s.status === 'wait' ? 'wait' : s.status === 'rest' ? 'rest' : 'work');
@@ -28,6 +28,26 @@ function matches(s) {
   if (!query) return true;
   const hay = fold([dn(s), s.name, s.dir, s.git?.branch, s.lastPrompt].join(' '));
   return fold(query).split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+}
+
+/* ---------- hold a row to close its session ---------- */
+function arm(id) { armedId = id; armedAt = Date.now(); clearTimeout(armTimer); armTimer = setTimeout(disarm, 5000); renderLite(); }
+function disarm() { if (armedId === null) return; armedId = null; clearTimeout(armTimer); renderLite(); }
+function cancelPress() { clearTimeout(pressTimer); press = null; }
+function watchHold() {
+  const box = $('lite');
+  box.addEventListener('pointerdown', (e) => {
+    const r = e.target.closest?.('.v2-row'); if (!r || e.button) return;
+    if (armedId && r.dataset.sid !== armedId) disarm();
+    const s = sessions.get(r.dataset.sid); if (!s || armedId === s.id || !canClose(s)) return;
+    press = { x: e.clientX, y: e.clientY };
+    clearTimeout(pressTimer); pressTimer = setTimeout(() => { press = null; navigator.vibrate?.(15); arm(s.id); }, 600);
+  });
+  box.addEventListener('pointermove', (e) => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress(); });
+  for (const t of ['pointerup', 'pointercancel']) box.addEventListener(t, cancelPress);
+  box.addEventListener('contextmenu', (e) => { if (armedId && e.target.closest?.('.v2-row')) e.preventDefault(); });
+  document.addEventListener('pointerdown', (e) => { if (armedId && !e.target.closest?.(`.v2-row[data-sid="${armedId}"]`)) disarm(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') disarm(); });
 }
 
 /* ---------- one row ---------- */
@@ -52,8 +72,16 @@ function row(s) {
     ctx.append(track, el('small', null, `${pct}%`)); ctx.title = tr('lite.ctx', { pct });
   }
   const time = el('span', 'v2-time', st === 'rest' ? fmtAgo((nowMs() - (s.lastAt || nowMs())) / 1000) : s.taskStart ? fmtClock((nowMs() - s.taskStart) / 1000) : '');
+  if (armedId === s.id) {
+    b.classList.add('is-arming');
+    doing.replaceChildren(icon('x'), el('span', null, tr('lite.closeAsk')));
+    ctx.replaceChildren(); time.textContent = '';
+  }
   b.append(dot, main, doing, ctx, time);
-  b.addEventListener('click', () => openSession(s.id));
+  b.addEventListener('click', () => {
+    if (armedId === s.id) { if (Date.now() - armedAt > 700) { disarm(); closeSessionProcess(s); } return; }   // (the first 0.7 s: the release of the hold itself)
+    openSession(s.id);
+  });
   return b;
 }
 /* ---------- the view ---------- */
@@ -61,23 +89,15 @@ function build() {
   const box = $('lite'); if (!box || head) return;
   head = el('div', 'v2-head');
   const title = el('div', 'v2-h1'); title.append(el('h2', null, tr('lite.title')));
-  tabs = el('div', 'v2-tabs'); tabs.setAttribute('role', 'tablist');
-  for (const k of ['all', ...GROUPS]) {
-    const t = el('button', 'v2-tab'); t.type = 'button'; t.setAttribute('role', 'tab'); t.dataset.f = k; t.setAttribute('aria-selected', String(k === filter));
-    t.append(el('span', null, k === 'all' ? tr('lite.all') : tr(`lite.${k}`)), el('small', 'v2-n', '0'));
-    t.addEventListener('click', () => { filter = k; for (const x of tabs.children) x.setAttribute('aria-selected', String(x.dataset.f === k)); renderLite(); });
-    tabs.append(t);
-  }
   const search = el('input', 'v2-search'); search.type = 'search'; search.id = 'lite-q'; search.placeholder = tr('lite.search'); search.setAttribute('aria-label', tr('lite.search')); search.autocomplete = 'off';
   search.addEventListener('input', () => { query = search.value.trim(); renderLite(); });
   search.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { search.value = ''; query = ''; renderLite(); search.blur(); } });
-  const bar = el('div', 'v2-bar'); bar.append(tabs, search);
-  head.append(title, bar);
+  head.append(title, search);
   permHost = el('div', 'v2-perms'); listEl = el('div', 'v2-list'); emptyEl = el('p', 'v2-empty'); emptyEl.hidden = true;
   box.replaceChildren(head, permHost, listEl, emptyEl);
 }
-export function setLite() {
-  lite = true; document.body.classList.add('is-lite'); $('lite').hidden = false;
+export function showLite() {
+  $('lite').hidden = false;
   // the approvals: at the top of the list
   build();
   const stack = $('perm-stack');
@@ -85,11 +105,8 @@ export function setLite() {
   renderLite();
 }
 export function renderLite() {
-  if (!lite || !listEl) return;
-  const all = [...sessions.values()], counts = { all: all.length, wait: 0, work: 0, rest: 0 };
-  for (const s of all) counts[statusOf(s)]++;
-  for (const t of tabs.children) { t.querySelector('.v2-n').textContent = String(counts[t.dataset.f]); t.classList.toggle('has-wait', t.dataset.f === 'wait' && counts.wait > 0); }
-  const list = all.filter((s) => (filter === 'all' || statusOf(s) === filter) && matches(s));
+  if (!listEl) return;
+  const all = [...sessions.values()], list = all.filter(matches);
   // (the focused row keeps its focus through the redraw every 2 s)
   const focused = document.activeElement?.closest?.('.v2-row')?.dataset.sid, top = $('lite').scrollTop;
   const frag = document.createDocumentFragment();
@@ -108,10 +125,10 @@ export function renderLite() {
 }
 
 export function setup() {
-  lite = true; document.body.classList.add('is-lite');
+  watchHold();
   // "/" finds a session (not while typing somewhere)
   document.addEventListener('keydown', (e) => {
-    if (!lite || e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (e.key !== '/' || document.body.classList.contains('is-archive') || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     e.preventDefault(); $('lite-q')?.focus();
   });
   setInterval(() => { if (document.visibilityState === 'visible') renderLite(); }, 2000);

@@ -1,11 +1,10 @@
 // Phone modal, notifications.
 import { state } from '../core/state.js';
-import { $, el, small } from '../core/env.js';
+import { $, el } from '../core/env.js';
 import { dn } from '../core/sessions.js';
 import { toast } from './activity.js';
-import { closeSession, drM, drS, openSession } from './session-drawer.js';
-import { closeMac } from './mac-drawer.js';
-import { popLook, togglePlan, togglePop } from './settings.js';
+import { closeSession, drS, openSession } from './session-drawer.js';
+import { popLook, togglePop } from './settings.js';
 import { t as tr } from '../../i18n/index.js';
 import { pushOff, pushOn, pushState, pushTest } from './notify.js';
 
@@ -119,7 +118,7 @@ export function renderPhone() {
   // 3. what phones may do: each off until switched on here (the server takes these switches from the Mac only)
   const list = el('div', 'pm-list');
   list.append(phoneSwitch(tr('topbar.phone.approve'), !!state.phoneApprove, false, async (want) => { const r = await post('/api/phone', { approve: want }); if (!r?.ok) return false; state.phoneApprove = r.approve; renderPhone(); return true; }, tr('topbar.phone.approveShort')));
-  // "Giao việc" from the group chat on a phone: a new Claude Code run on this Mac (server/tasks.mjs)
+  // giving Claude work from a phone (the box under a conversation): a new Claude Code run on this Mac (server/tasks.mjs)
   if (tun) list.append(phoneSwitch(tr('topbar.phone.tasksSwitch'), !!tun.tasks, false, async (want) => { const r = await post('/api/tasks/allow', { on: want }); if (!r?.ok) return false; tun.tasks = r.allowed; renderPhone(); return true; }, tr('topbar.phone.tasksShort')));
   // that work as Claude Code background sessions (server/bg-sessions.mjs), when this Claude Code has them: offered with
   // the switch above on (or this one on, to turn it off)
@@ -143,7 +142,7 @@ export function renderPhone() {
 
 // Notifications on this phone: one button (an iPhone asks only right after a tap), what went wrong if it didn't work,
 // or how to get them (an iPhone: the office added to its home screen first)
-export function notifyBox(body) {
+function notifyBox(body) {
   const box = el('div', 'pm-notify');
   body.append(el('h4', 'pm-h', tr('topbar.phone.notifyTitle')), box);
   const btn = (text, cls, fn) => { const b = el('button', `btn ${cls}`, text); b.type = 'button'; b.addEventListener('click', fn); return b; };
@@ -216,11 +215,10 @@ export function setup() {
   });
   document.addEventListener('click', (ev) => {
     const c = ev.target.closest('[data-close]'); if (!c) return;
-    if (c.closest('#dr-session')) closeSession(); else if (c.closest('#dr-mac')) closeMac(); else if (c.closest('#phone-modal')) $('phone-modal').hidden = true;
+    if (c.closest('#dr-session')) closeSession(); else if (c.closest('#phone-modal')) $('phone-modal').hidden = true;
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
-    if (!popLook.hidden) togglePop(false); else if (!$('pop-plan').hidden) togglePlan(false); else if (!$('phone-modal').hidden) $('phone-modal').hidden = true; else if (!drS.hidden) closeSession(); else if (!drM.hidden) closeMac();
+    if (!popLook.hidden) togglePop(false); else if (!$('phone-modal').hidden) $('phone-modal').hidden = true; else if (!drS.hidden) closeSession();
   });
-  $('feed-toggle').addEventListener('click', () => { if (!small.matches) return; const open = $('feed').classList.toggle('feed--open'); $('feed-toggle').setAttribute('aria-expanded', String(open)); });
 }

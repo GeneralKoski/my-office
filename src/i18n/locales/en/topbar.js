@@ -41,7 +41,6 @@ export default {
     tunNote: 'The address stays until you turn the tunnel off or restart the Mac.',
     tunError: 'The tunnel isn’t open yet: {error}. Turn it off and on to try again.',
     pinTitle: 'PIN',
-    pinLabel: 'Phones get in with',
     tsOn: 'Your Tailscale network is on. On your phone (with Tailscale on too) open this address and enter the PIN:',
     setPin: 'Set your own',
     setPinHint: '6–10 digits',

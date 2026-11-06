@@ -1,7 +1,7 @@
 export default {
   language: 'Language',
   switchingLang: 'Switching language…',
-  tabs: { office: 'Office', people: 'Characters', display: 'Display', more: 'More' },
+  tabs: { display: 'Display', more: 'More' },
   notify: 'Phone and alerts',
   phoneNote: 'Approve and watch from your phone',
   bellNote: 'A desktop alert when Claude needs you',

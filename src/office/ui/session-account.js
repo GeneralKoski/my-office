@@ -1,12 +1,12 @@
-// "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has
-// left. A click moves the conversation (POST /api/accounts/move, moveSession in server/index.mjs): one in the editor
+// "Change account" in a session's drawer (on this computer only): the Claude accounts the server knows, each with what
+// it has left. A click moves the conversation (POST /api/accounts/move, moveSession in server/index.mjs): one in the editor
 // carries on on that account as soon as you write in it again; one in a terminal gets the command that resumes it
 // there, to copy. A moved one says where it went until it starts again.
 import { state } from '../core/state.js';
 import { el, hhmm } from '../core/env.js';
 import { icon } from './icons.js';
 import { toast } from './activity.js';
-import { acctName, codeBox, resetText } from './mac-drawer.js';
+import { acctName, codeBox, resetText } from './plan.js';
 import { DEMO } from '../demo/demo.js';
 import { t as tr } from '../../i18n/index.js';
 

@@ -40,5 +40,4 @@ export function setup() {
     const f = e.target.closest('[data-model-force]'); if (f && !f.disabled) { save({ force: !conf.force }); return; }
     if (e.target.closest('[data-model-split]')) save({ split: !conf.split });
   });
-  load();
 }

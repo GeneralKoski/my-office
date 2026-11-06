@@ -5,6 +5,7 @@ import ui from './ui.js';
 import topbar from './topbar.js';
 import settings from './settings.js';
 import lite from './lite.js';
+import archive from './archive.js';
 import drawer from './drawer.js';
 import activity from './activity.js';
 import perm from './perm.js';
@@ -17,9 +18,6 @@ import trophies from './trophies.js';
 import server from './server.js';
 import cli from './cli.js';
 import chat from './chat.js';
-import burn from './burn.js';
-import vault from './vault.js';
-import ai from './ai.js';
 import panel from './panel.js';
 
-export default { common, time, ui, topbar, settings, lite, drawer, activity, perm, incident, events, people, demo, mac, trophies, server, cli, chat, burn, vault, ai, panel };
+export default { common, time, ui, topbar, settings, lite, archive, drawer, activity, perm, incident, events, people, demo, mac, trophies, server, cli, chat, panel };

@@ -1,11 +1,11 @@
-// The session drawer: chat, steps, subagents.
+// The session page: chat, steps, subagents.
 import { state } from '../core/state.js';
-import { $, el, fmtBytes, fmtClock, hhmm, nowMs, pad2, reduceMotion, short, small } from '../core/env.js';
+import { $, el, fmtClock, hhmm, nowMs, pad2, reduceMotion, short } from '../core/env.js';
 import { STATUS_LABEL, verb } from './event-text.js';
 import { TYPE_ICON, icon } from './icons.js';
 import { colorOf, dn, sessions } from '../core/sessions.js';
 import { cap, feedRow, fmtTok, fmtUsd, openFromRow, queueUi, toast } from './activity.js';
-import { closeMac, doAction, loadMac, macSnap } from './mac-drawer.js';
+import { openImage } from './image-view.js';
 import { TOKEN } from '../net/live.js';
 import { unseenDone } from '../life/your-turn.js';
 import { DEMO, demoLog } from '../demo/demo.js';
@@ -13,6 +13,7 @@ import { acctActions } from './session-account.js';
 import { drawDrawerCache } from './cache-words.js';
 import { pinsLabel, renderPins } from './pins.js';
 import { openUndo } from './undo-view.js';
+import { renameChat } from './rename.js';
 import { t as tr, locale } from '../../i18n/index.js';
 import { modelLong } from '../../shared/model-name.js';
 
@@ -21,15 +22,11 @@ export let tab = 'chat';
 let logItems = [], subItems = [];
 let logTimer = null;
 export let drS;
-export let drM;
-export function toggleSession(id) { if (state.selectedId === id && !drS.hidden) closeSession(); else openSession(id); }
 export function openSession(id, opts = {}) {
   unseenDone.delete(id);
   if (!sessions.has(id)) return;
-  closeMac();
   const same = state.selectedId === id && !drS.hidden;
   state.selectedId = id; drS.hidden = false;
-  if (small.matches) $('feed').classList.remove('feed--open');
   if (!same) { logItems = []; subItems = []; }
   state.subView = opts.agent || null;
   setTab(opts.tab || 'chat');
@@ -37,11 +34,12 @@ export function openSession(id, opts = {}) {
   loadLog(true);
   queueUi();
 }
-export function closeSession() { state.selectedId = null; state.subView = null; drS.hidden = true; queueUi(); }
+function showInfo(on) { drS.classList.toggle('is-info', on); $('dr-info').setAttribute('aria-expanded', String(on)); }
+export function closeSession() { state.selectedId = null; state.subView = null; drS.hidden = true; showInfo(false); queueUi(); }
 export function renderSessionHead() {
   const s = sessions.get(state.selectedId); if (!s) return;
   $('ds-dot').style.background = colorOf(s);
-  $('ds-name').textContent = dn(s);
+  $('ds-name').textContent = dn(s); $('ds-rename').hidden = !s.sid;
   $('ds-dir').textContent = s.origin ? `${s.dir} · ${s.origin}` : s.dir;
   drawDrawerCache();   // (its prompt cache: warm for how long, or cold)
   const st = $('ds-status'); st.textContent = STATUS_LABEL[s.status]; st.dataset.status = s.status;
@@ -69,10 +67,9 @@ function renderActions() {
   const s = sessions.get(state.selectedId); if (!s) return;
   const box = $('ds-actions'); box.replaceChildren(); drawnSig = actionsSig(s);
   if (state.isLocal && s.pid) {
-    const b = el('button', 'btn btn--sm'); b.type = 'button'; b.append(icon('monitor'), tr(s.origin === 'Terminal' ? 'drawer.openWindowTerminal' : s.origin ? 'drawer.openWindowIde' : 'drawer.openWindow'));
+    const b = el('button', 'btn btn--sm act-desk'); b.type = 'button'; b.append(icon('monitor'), tr(s.origin === 'Terminal' ? 'drawer.openWindowTerminal' : s.origin ? 'drawer.openWindowIde' : 'drawer.openWindow'));
     b.title = tr('drawer.openWindowTitle'); b.addEventListener('click', () => openWindowOf(s)); box.append(b);
   }
-  if (state.isLocal && s.pid && s.status === 'rest') box.append(closeSessionButton(s));
   // the last turn's file changes, put back (server/undo.mjs): once it is over, while it rests
   if (s.status === 'rest' && s.undo?.done && !s.undo.undone) {
     const u = el('button', 'btn btn--sm'); u.type = 'button'; u.textContent = tr('drawer.undo.btn'); u.title = tr('drawer.undo.title');
@@ -81,11 +78,11 @@ function renderActions() {
   }
   box.append(...acctActions(s, renderActions));
   if (s.link) {
-    const a = el('a', 'btn btn--primary btn--sm', tr('drawer.openOnClaude')); a.href = s.link; a.target = '_blank'; a.rel = 'noopener';
+    const a = el('a', 'btn btn--primary btn--sm act-link', tr('drawer.openOnClaude')); a.href = s.link; a.target = '_blank'; a.rel = 'noopener';
     box.append(a);
     // on the Mac: a QR code of the session's Remote Control link, to carry on from the phone (the Claude app opens it)
     if (state.isLocal && window.QRCode) {
-      const q = el('button', 'btn btn--sm'); q.type = 'button'; q.title = tr('drawer.qrTitle'); q.textContent = tr('drawer.qr'); q.setAttribute('aria-pressed', String(qrFor === s.id));
+      const q = el('button', 'btn btn--sm act-link'); q.type = 'button'; q.title = tr('drawer.qrTitle'); q.textContent = tr('drawer.qr'); q.setAttribute('aria-pressed', String(qrFor === s.id));
       q.addEventListener('click', () => { qrFor = qrFor === s.id ? null : s.id; renderActions(); });
       box.append(q);
       if (qrFor === s.id) { const code = el('div', 'qr dr-qr'); try { new window.QRCode(code, { text: s.link, width: 180, height: 180 }); box.append(code, el('p', 'dr-note', tr('drawer.qrNote'))); } catch { /* no QR */ } }
@@ -97,30 +94,29 @@ function renderActions() {
     box.append(p);
   }
 }
-// "Close session" for a session that is resting: the same safe stop as the Mac panel (only the process you saw, matched by
-// its start time; never one that is working). Two clicks, so a stray click closes nothing. The conversation stays on
-// disk: `claude --resume` opens it again.
-let closeArm = null, closeArmTimer = 0;
-const closing = new Set();
-function closeSessionButton(s) {
-  const key = `close:${s.pid}`, armed = closeArm === key, mem = macSnap?.claude?.find((x) => x.pid === s.pid)?.mem;
-  const b = el('button', 'btn btn--sm' + (armed ? ' btn--danger' : '')); b.type = 'button';
-  b.append(icon('x'), closing.has(key) ? tr('drawer.close.closing') : armed ? tr('drawer.close.confirm') : mem ? tr('drawer.close.labelMem', { mem: fmtBytes(mem) }) : tr('drawer.close.label'));
-  b.title = mem ? tr('drawer.close.titleMem', { mem: fmtBytes(mem) }) : tr('drawer.close.title');
-  b.disabled = closing.has(key);
-  b.addEventListener('click', async () => {
-    if (!armed) { closeArm = key; clearTimeout(closeArmTimer); closeArmTimer = setTimeout(() => { closeArm = null; renderActions(); }, 4500); renderActions(); return; }
-    closeArm = null; closing.add(key); renderActions();
-    let proc = macSnap?.claude?.find((x) => x.pid === s.pid);
-    if (!proc) { await loadMac(); proc = macSnap?.claude?.find((x) => x.pid === s.pid); }
-    if (!proc) toast(tr('drawer.close.gone'));
-    else await doAction(`kill:${s.pid}`, { action: 'kill', target: s.pid, start: proc.start });
-    closing.delete(key); loadMac(); if (state.selectedId === s.id) renderActions();
-  });
-  return b;
+// "Close session" (held on a row of the list, ui/lite.js) for a session that is resting: a safe stop (only the process you
+// saw, matched by its start time; never one that is working). The conversation stays on disk: `claude --resume` opens it again.
+let macSnap = null;   // the machine's processes (GET /api/sys): which one is the session's, and what it holds
+async function loadMac() {
+  if (DEMO) return;
+  try { macSnap = await (await fetch(`/api/sys${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`)).json(); } catch { /* server busy */ }
+}
+async function stopProcess(body) {
+  try {
+    const d = await (await fetch(`/api/sys/action${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
+    toast(d.message || (d.ok ? tr('mac.action.done') : tr('mac.action.failed')), d.closed ? 7000 : undefined);
+  } catch { toast(tr('mac.action.unreachable')); }
+}
+export const canClose = (s) => !!(state.isLocal && s.pid && s.status === 'rest');
+export async function closeSessionProcess(s) {
+  let proc = macSnap?.claude?.find((x) => x.pid === s.pid);
+  if (!proc) { await loadMac(); proc = macSnap?.claude?.find((x) => x.pid === s.pid); }
+  if (!proc) toast(tr('drawer.close.gone'));
+  else await stopProcess({ action: 'kill', target: s.pid, start: proc.start });
 }
 function setTab(t) {
   tab = t;
+  $('dr-main').dataset.tab = t;
   for (const [id, name] of [['tab-chat', 'chat'], ['tab-subs', 'subs'], ['tab-act', 'act'], ['tab-pins', 'pins']]) $(id).setAttribute('aria-selected', String(t === name));
   if (t === 'chat') { if (logItems.length) renderChat(true); else $('ds-body').replaceChildren(el('p', 'chat-empty', tr('drawer.loadingChat'))); }
   else if (t === 'subs') renderSubs(true);
@@ -243,6 +239,7 @@ function copyText(text, btn) {
 }
 // Which long messages / step groups / summaries are open survives the re-render that follows every new event.
 const chatOpen = new Set();
+const stepsShut = new Set();   // (the tool steps open themselves: the ones you folded stay folded)
 const chatKey = (it, k) => `${it.role}:${it.ts}:${k}`;
 const LONG_CHARS = 1100, LONG_LINES = 18;
 // the tally word for each step type: a key under drawer.step
@@ -253,18 +250,20 @@ function chatDay(ts) {
     : tr('drawer.date', { dd: pad2(d.getDate()), mm: pad2(d.getMonth() + 1), d: d.getDate(), mon: d.toLocaleDateString(locale(), { month: 'short' }) });
   return `${day} · ${hhmm(ts)}`;
 }
-function foldable(details, key) {
-  if (chatOpen.has(key)) details.open = true;
-  details.addEventListener('toggle', () => { if (details.open) chatOpen.add(key); else chatOpen.delete(key); });
+function foldable(details, key, openByDefault = false) {
+  details.open = openByDefault ? !stepsShut.has(key) : chatOpen.has(key);
+  details.addEventListener('toggle', () => {
+    if (details.open) { chatOpen.add(key); stepsShut.delete(key); } else { chatOpen.delete(key); stepsShut.add(key); }
+  });
   return details;
 }
-function buildChat(items, who = 'Claude') {
+export function buildChat(items, who = 'Claude') {
   const chat = el('div', 'chat');
   if (!items.length) chat.append(el('p', 'chat-empty', tr('drawer.chatEmpty')));
   let steps = null, lastTs = 0;
   const flush = () => {
     if (!steps) return;
-    const first = steps[0], d = foldable(el('details', 'steps'), chatKey(first, 'steps'));
+    const first = steps[0], d = foldable(el('details', 'steps'), chatKey(first, 'steps'), true);
     const sum = el('summary'), counts = {};
     for (const x of steps) { const w = STEP_WORD[x.type] || 'other'; counts[w] = (counts[w] || 0) + 1; }
     sum.append(el('span', 'st-ico', null), el('b', null, tr('drawer.steps', { n: steps.length })));
@@ -319,7 +318,7 @@ function buildChat(items, who = 'Claude') {
   flush();
   return chat;
 }
-export function renderChat(scrollEnd) {
+function renderChat(scrollEnd) {
   if (tab !== 'chat') return;
   const body = $('ds-body');
   const nearEnd = body.scrollHeight - body.scrollTop - body.clientHeight < 80;
@@ -372,13 +371,20 @@ export function renderActivity() {
   const ul = el('ul', 'feed-list'); ul.style.padding = '0';
   if (!mine.length) ul.append(el('li', 'fi-empty', tr('drawer.noActivity')));
   for (const e of mine) ul.append(feedRow(e, false));
-  ul.addEventListener('click', (ev) => { const b = ev.target.closest('[data-agent]'); if (b) openFromRow(b); });
+  ul.addEventListener('click', (ev) => {
+    const im = ev.target.closest('[data-img]'); if (im) { openImage(im.dataset.img, im.dataset.name); return; }
+    const b = ev.target.closest('[data-agent]'); if (b) openFromRow(b);
+  });
   body.replaceChildren(ul);
 }
 
 export function setup() {
   state.subView = null;
-  drS = $('dr-session'); drM = $('dr-mac');
+  drS = $('dr-session');
+  $('ds-rename').addEventListener('click', () => { const s = sessions.get(state.selectedId); if (s?.sid) renameChat({ sid: s.sid, title: s.title || '', cwd: s.dir, first: s.lastPrompt }); });
+  // narrow screens: the numbers and actions in a card under the header, from the info button
+  $('dr-info').addEventListener('click', () => showInfo(!drS.classList.contains('is-info')));
+  document.addEventListener('pointerdown', (e) => { if (drS.classList.contains('is-info') && !e.target.closest('.dr-card, .dr-info')) showInfo(false); });
   $('tab-chat').addEventListener('click', () => { setTab('chat'); loadLog(true); });
   $('tab-subs').addEventListener('click', () => { state.subView = null; setTab('subs'); });
   $('tab-act').addEventListener('click', () => setTab('act'));
@@ -389,6 +395,6 @@ export function setup() {
    jumpBtn.hidden = true;
   jumpBtn.append(icon('chevron'), document.createTextNode(tr('drawer.latest')));
   jumpBtn.addEventListener('click', () => { const b = $('ds-body'); b.scrollTo({ top: b.scrollHeight, behavior: reduceMotion ? 'auto' : 'smooth' }); });
-  $('dr-session').append(jumpBtn);
+  $('dr-main').append(jumpBtn);
   $('ds-body').addEventListener('scroll', syncJump, { passive: true });
 }

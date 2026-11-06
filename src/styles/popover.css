@@ -1,0 +1,24 @@
+/* The settings popover's parts: the segmented control, the card and the switches. */
+.seg { display: flex; gap: 6px; margin: 0 16px; padding: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.seg button { all: unset; flex: 1; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 9px; border: 1px solid transparent; font-size: .8rem; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); }
+.seg button:focus-visible { outline: 2px solid var(--accent); }
+.pop-wrap { position: relative; }
+.pop { position: absolute; right: 0; top: calc(100% + 8px); width: 340px; padding: 14px; display: grid; gap: 8px; background: #151C27; border: 1px solid var(--line-2); border-radius: 16px; box-shadow: 0 22px 50px rgba(0, 0, 0, .55); z-index: 20; }
+.pop h3 { margin: 4px 2px 0; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+.scene { all: unset; box-sizing: border-box; display: grid; gap: 3px; padding: 6px 6px 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); cursor: pointer; }
+.scene:hover { border-color: var(--line-2); }
+.scene[aria-pressed="true"] { border-color: var(--accent-line); background: var(--accent-soft); }
+.scene:focus-visible { outline: 2px solid var(--accent); }
+.scene b { font-size: .76rem; padding: 0 2px; }
+.scene small { font-size: .64rem; color: var(--muted); padding: 0 2px; }
+.pop-note { margin: 6px 2px 0; font-size: .7rem; color: var(--muted); line-height: 1.35; }
+.pop-toggles { display: grid; gap: 2px; }
+.tgl { all: unset; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 4px; border-radius: 8px; font-size: .78rem; color: var(--ink); cursor: pointer; }
+.tgl:hover { background: var(--card); }
+.tgl:focus-visible { outline: 2px solid var(--accent); }
+.tgl i { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--card-3); flex: none; transition: background .15s; }
+.tgl i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: #C8D0DD; transition: transform .15s, background .15s; }
+.tgl[aria-checked="true"] i { background: var(--green); }
+.tgl[aria-checked="true"] i::after { transform: translateX(14px); background: #fff; }
+@media (max-width: 1280px) { #btn-look .lbl { display: none; } #btn-look { width: 38px; padding: 0; justify-content: center; } }

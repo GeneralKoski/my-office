@@ -6,19 +6,14 @@ import { getLang, getT } from '@/i18n/server';
 import '@/styles/fonts.css';
 import '@/styles/base.css';
 import '@/styles/topbar.css';
-import '@/styles/topbar-plan.css';
-import '@/styles/sidebars.css';
 import '@/styles/activity.css';
-import '@/styles/sessions.css';
+import '@/styles/popover.css';
 import '@/styles/permissions.css';
 import '@/styles/stage.css';
 import '@/styles/lite.css';
+import '@/styles/archive.css';
 import '@/styles/drawers.css';
 import '@/styles/chat.css';
-import '@/styles/group-chat.css';
-import '@/styles/mac.css';
-import '@/styles/burn.css';
-import '@/styles/vault.css';
 import '@/styles/modal.css';
 import '@/styles/settings.css';
 import '@/styles/responsive.css';
@@ -50,7 +45,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     // data-os: the machine's platform, for the words "Mac" / "PC" / "computer" (the online demo is a pretend Mac)
     <html lang={await getLang()} data-os={process.env.OFFICE_STATIC === '1' ? 'darwin' : process.platform}>
-      <body className="is-lite">
+      <body>
         {children}
         {/* QR codes for "open on your phone" (qrcode.js, MIT), kept local so the office works offline */}
         <Script src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/vendor/qrcode.min.js`} strategy="afterInteractive" />

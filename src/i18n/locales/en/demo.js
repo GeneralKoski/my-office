@@ -1,5 +1,5 @@
 // The fictional demo (?demo, and the public online demo): six projects with their prompts and steps, the chat with
-// Claude, a pretend Mac and one scripted failure. In English it should read like an ordinary day of an English-speaking
+// Claude and one scripted failure. In English it should read like an ordinary day of an English-speaking
 // developer. File paths, search terms and shell commands are the same in every language and live in demo/demo.js.
 export default {
   // what you ask for and what Claude's steps say (a command's line shows its description, as Claude Code does)
@@ -14,32 +14,6 @@ export default {
     keyboard: { prompt: 'Fix the keyboard covering the input fields', uiTest: 'Run the UI tests' },
     install: { prompt: 'Write the installation guide', build: 'Build the docs site' },
     staging: { prompt: 'Give the staging server more RAM', wait: 'Run terraform apply' },
-  },
-  // the pretend Mac: what to stop, quit and clean up
-  mac: {
-    // the conversations' titles, as Claude Code names them (the Mac panel's Claude sessions)
-    titles: { 'shop-api': 'Cart pagination and shipping fees', 'landing-page': 'New hero section and WebP images', 'data-pipeline': 'Duplicate orders in the ETL', 'mobile-app': 'Google sign-in on the login screen', 'docs-site': 'Installation guide', 'infra': 'Staging Terraform changes' },
-    devTitle: 'Stop next dev · port 3000',
-    devDetail: '~/projects/landing-page · running 2 d 3 h · CPU 290% · RAM 2.3 GB',
-    lostTitle: 'Stop forgotten vite · port 5173',
-    lostDetail: '~/projects/old-prototype · session old-prototype closed but left it running · running 9 h',
-    chromeTitle: 'Quit Google Chrome',
-    chromeDetail: '4.8 GB RAM · 22 processes · save your work first',
-    tmpTitle: 'Temp folders from closed Claude sessions',
-    tmpDetail: '8.4 GB on disk · 61 scratch folders. Open sessions are left alone.',
-    tmpCleanup: '61 scratch folders in /tmp',
-    nextTitle: 'Next.js build cache · ~/projects/landing-page',
-    nextDetail: 'Next rebuilds it on the next build',
-    npmTitle: 'npm download cache',
-    npmDetail: 'npm downloads packages again when needed',
-    stop: 'Stop',
-    quit: 'Quit',
-    clean: 'Clean up',
-  },
-  // Claude's to-do lists in two of the sessions
-  checklist: {
-    cart: { params: 'Add page and limit to the API', lastPage: 'Write a test for the last page', docs: 'Update the API docs' },
-    schedule: { read: 'Read the current DAG', move: 'Move the schedule to 2 AM', crontab: 'Write to crontab', trial: 'Do a test run' },
   },
   // Claude's replies: what it usually writes (lists, code, tables), so the chat reader can be judged
   replies: {

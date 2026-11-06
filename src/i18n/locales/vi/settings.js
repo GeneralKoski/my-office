@@ -1,7 +1,7 @@
 export default {
   language: 'Ngôn ngữ',
   switchingLang: 'Đang đổi ngôn ngữ…',
-  tabs: { office: 'Văn phòng', people: 'Nhân vật', display: 'Hiển thị', more: 'Khác' },
+  tabs: { display: 'Hiển thị', more: 'Khác' },
   phoneNote: 'Duyệt và theo dõi từ điện thoại',
   bellNote: 'Báo trên máy khi Claude cần bạn',
   notify: 'Điện thoại và thông báo',

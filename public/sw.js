@@ -1,6 +1,6 @@
-// My Office on a phone (registered by the page, ui/notify.js): it shows the office's notifications (Claude's answers, an
-// approval waiting) even with the office closed and the phone locked, and a tap opens the office, at the group chat for
-// an answer. Nothing is cached: the office is live or it is nothing.
+// My Office on a phone (registered by the page, ui/notify.js): it shows the office's notifications (an approval waiting)
+// even with the office closed and the phone locked, and a tap opens the office. Nothing is cached: the office is live or
+// it is nothing.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('push', (e) => {
@@ -15,7 +15,7 @@ self.addEventListener('notificationclick', (e) => {
   const url = new URL(e.notification.data?.url || '/', self.location.origin).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
     const open = list.find((c) => new URL(c.url).origin === self.location.origin);
-    if (open) { open.postMessage({ k: 'open', url }); return open.focus(); }
+    if (open) return open.focus();
     return self.clients.openWindow(url);
   }));
 });
